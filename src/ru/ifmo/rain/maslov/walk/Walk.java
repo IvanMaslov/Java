@@ -1,7 +1,7 @@
 package ru.ifmo.rain.maslov.walk;
 
 import java.io.*;
-import java.nio.*;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Function;
 
 public class Walk {
@@ -15,10 +15,10 @@ public class Walk {
         execute(argv[0], argv[1], Walk::hash);
     }
 
-    public static void execute(String fileIn, String fileOut, Function<String, String> f) {
+    private static void execute(String fileIn, String fileOut, Function<String, String> f) {
         try {
-            BufferedReader in = new BufferedReader(new FileReader(fileIn));
-            BufferedWriter out = new BufferedWriter(new FileWriter(fileOut));
+            BufferedReader in = new BufferedReader(new FileReader(fileIn, StandardCharsets.UTF_8));
+            BufferedWriter out = new BufferedWriter(new FileWriter(fileOut, StandardCharsets.UTF_8));
             String line;
             while ((line = in.readLine()) != null) {
                 out.write(f.apply(line));
@@ -32,7 +32,7 @@ public class Walk {
     }
 
 
-    public static String hash(String fileName) {
+    static String hash(String fileName) {
         final int FNV_32_PRIME = 0x01000193;
         int res = 0x811c9dc5;
         try {

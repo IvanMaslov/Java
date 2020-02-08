@@ -1,39 +1,48 @@
 package ru.ifmo.rain.maslov.walk;
 
-import ru.ifmo.rain.maslov.walk.Walk;
 
 import java.io.*;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.stream.Collector;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 
 public class RecursiveWalk {
-    private static final int BUFSIZE = 1024;
 
     public static void main(String[] argv) {
         if (argv.length != 2) {
-            System.err.println("Incorrect argument: use RecrsiveWalk <input file> <output file>");
+            System.err.println("Incorrect argument: use RecursiveWalk <input file> <output file>");
             return;
         }
-        Walk.execute(argv[0], argv[1], (String a) -> recursiveGo(a).toString());
+        execute(argv[0], argv[1]);
     }
 
-    public static StringBuilder recursiveGo(String path) {
-        StringBuilder result = new StringBuilder();
-        Path p = Paths.get(path);
-        if (Files.isDirectory(p)) {
-            try {
-                Files.walk(p)
-                        .map((Path somePath) -> recursiveGo(somePath.toString()))
-                        .forEach((StringBuilder bldr) -> result.append(bldr.toString()));
-            } catch (IOException e) {
-                return result;
+    private static void execute(String fileIn, String fileOut) {
+        try {
+            BufferedReader in = new BufferedReader(new FileReader(fileIn, StandardCharsets.UTF_8));
+            BufferedWriter out = new BufferedWriter(new FileWriter(fileOut, StandardCharsets.UTF_8));
+            String line;
+            while ((line = in.readLine()) != null) {
+                Files.walkFileTree(Paths.get(line), new MyVisitor(out));
             }
+            out.flush();
+            in.close();
+            out.close();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
-        if (Files.isRegularFile(p)) {
-            result.append(Walk.hash(path));
+    }
+
+    public static class MyVisitor extends SimpleFileVisitor<Path> {
+        private final Writer writer;
+
+        MyVisitor(Writer writer) {
+            this.writer = writer;
         }
-        return result;
+
+        @Override
+        public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
+            writer.write(Walk.hash(path.toString()));
+            return FileVisitResult.CONTINUE;
+        }
     }
 }
