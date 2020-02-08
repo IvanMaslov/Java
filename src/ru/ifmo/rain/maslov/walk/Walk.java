@@ -2,6 +2,7 @@ package ru.ifmo.rain.maslov.walk;
 
 import java.io.*;
 import java.nio.*;
+import java.util.function.Function;
 
 public class Walk {
     private static final int BUFSIZE = 1024;
@@ -11,16 +12,16 @@ public class Walk {
             System.err.println("Incorrect argument: use Walk <input file> <output file>");
             return;
         }
-        walk(argv[0], argv[1]);
+        execute(argv[0], argv[1], Walk::hash);
     }
 
-    private static void walk(String fileIn, String fileOut) {
+    public static void execute(String fileIn, String fileOut, Function<String, String> f) {
         try {
             BufferedReader in = new BufferedReader(new FileReader(fileIn));
             BufferedWriter out = new BufferedWriter(new FileWriter(fileOut));
             String line;
             while ((line = in.readLine()) != null) {
-                out.write(hash(line) + ' ' + line + '\n');
+                out.write(f.apply(line));
             }
             out.flush();
             in.close();
@@ -31,7 +32,7 @@ public class Walk {
     }
 
 
-    private static String hash(String fileName) {
+    public static String hash(String fileName) {
         final int FNV_32_PRIME = 0x01000193;
         int res = 0x811c9dc5;
         try {
@@ -48,9 +49,9 @@ public class Walk {
             file.close();
         } catch (IOException e) {
             e.printStackTrace();
-            return "00000000";
+            return "00000000" + ' ' + fileName + '\n';
         }
-        return String.format("%08x", res);
+        return String.format("%08x", res) + ' ' + fileName + '\n';
     }
 
 }
