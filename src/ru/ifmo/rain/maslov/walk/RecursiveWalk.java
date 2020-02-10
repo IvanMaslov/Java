@@ -17,16 +17,12 @@ public class RecursiveWalk {
     }
 
     private static void execute(String fileIn, String fileOut) {
-        try {
-            BufferedReader in = new BufferedReader(new FileReader(fileIn, StandardCharsets.UTF_8));
-            BufferedWriter out = new BufferedWriter(new FileWriter(fileOut, StandardCharsets.UTF_8));
+        try (BufferedReader in = new BufferedReader(new FileReader(fileIn, StandardCharsets.UTF_8));
+             BufferedWriter out = new BufferedWriter(new FileWriter(fileOut, StandardCharsets.UTF_8))) {
             String line;
             while ((line = in.readLine()) != null) {
                 Files.walkFileTree(Paths.get(line), new MyVisitor(out));
             }
-            out.flush();
-            in.close();
-            out.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
