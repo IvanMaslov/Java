@@ -3,6 +3,7 @@ package ru.ifmo.rain.maslov.walk;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Paths;
 import java.util.function.Function;
 
@@ -42,8 +43,19 @@ public class Walk {
         }
     }
 
+    static String formatFileOutput(int res, String fileName) {
+        return String.format("%08x", res) + ' ' + fileName + '\n';
+    }
 
     static String hash(String fileName) {
+        if(fileName == null || fileName.isBlank())
+            return formatFileOutput(0, fileName);
+        try {
+            Paths.get(fileName);
+        } catch (InvalidPathException e) {
+            System.err.println("Invalid input or output path");
+            return formatFileOutput(0, fileName);
+        }
         final int FNV_32_PRIME = 0x01000193;
         int res = 0x811c9dc5;
         try (FileInputStream file = new FileInputStream(fileName)) {
@@ -57,9 +69,9 @@ public class Walk {
             }
         } catch (IOException e) {
             e.printStackTrace();
-            res = 0;
+            return formatFileOutput(0, fileName);
         }
-        return String.format("%08x", res) + ' ' + fileName + '\n';
+        return formatFileOutput(res, fileName);
     }
 
 }
