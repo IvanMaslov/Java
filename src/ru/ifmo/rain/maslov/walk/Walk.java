@@ -43,8 +43,12 @@ public class Walk {
         }
     }
 
+    static void logger(String reason, Exception e) {
+        System.err.println("ERROR: \t" + reason + "\n\t" + e.getMessage());
+    }
+
     static String formatFileOutput(int res, String fileName) {
-        return String.format("%08x", res) + ' ' + fileName + '\n';
+        return String.format("%08x", res) + " " + fileName + "\n";
     }
 
     static String hash(String fileName) {
@@ -53,7 +57,7 @@ public class Walk {
         try {
             Paths.get(fileName);
         } catch (InvalidPathException e) {
-            System.err.println("Invalid input or output path");
+            logger("Invalid path " + fileName, e);
             return formatFileOutput(0, fileName);
         }
         final int FNV_32_PRIME = 0x01000193;
@@ -69,6 +73,7 @@ public class Walk {
             }
         } catch (IOException e) {
             e.printStackTrace();
+            logger("IOException in " + fileName, e);
             return formatFileOutput(0, fileName);
         }
         return formatFileOutput(res, fileName);

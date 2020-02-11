@@ -19,16 +19,21 @@ public class RecursiveWalk {
     private static void execute(String fileIn, String fileOut) {
         try {
             Paths.get(fileIn);
+        } catch (InvalidPathException e) {
+            Walk.logger("Invalid input path: " + fileIn, e);
+            return;
+        }
+        try {
             Paths.get(fileOut);
         } catch (InvalidPathException e) {
-            System.err.println("Invalid input or output path");
+            Walk.logger("Invalid output path: " + fileIn, e);
             return;
         }
         if (Paths.get(fileOut).getParent() != null) {
             try {
                 Files.createDirectories(Paths.get(fileOut).getParent());
             } catch (IOException e) {
-                System.err.println("Cannot create output file");
+                Walk.logger("Cannot create output file directories: " + fileOut, e);
                 return;
             }
         }
@@ -43,20 +48,21 @@ public class RecursiveWalk {
                         out.write(Walk.formatFileOutput(0, line));
                     }
                 } catch (FileNotFoundException e) {
-                    System.err.println("No such path: " + line);
+                    Walk.logger("No such path: " + line, e);
                     out.write(Walk.formatFileOutput(0, line));
                 } catch (InvalidPathException e) {
-                    System.err.println("Invalid path: " + line);
+                    Walk.logger("Invalid path: " + line, e);
                     out.write(Walk.formatFileOutput(0, line));
                 } catch (IOException ignore) {
+                    Walk.logger(null, ignore);
                     out.write(Walk.formatFileOutput(0, line));
                     ///file or directory not exists
                 }
             }
         } catch (FileNotFoundException e) {
-            System.err.println("No such file error");
+            Walk.logger("No such file error", e);
         } catch (IOException e) {
-            System.err.println("Some read\\write error occurred");
+            Walk.logger("Some read\\write error occurred", e);
         }
     }
 
