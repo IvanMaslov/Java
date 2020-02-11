@@ -2,6 +2,8 @@ package ru.ifmo.rain.maslov.walk;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.util.function.Function;
 
 public class Walk {
@@ -16,13 +18,26 @@ public class Walk {
     }
 
     private static void execute(String fileIn, String fileOut, Function<String, String> f) {
+        if (Paths.get(fileOut).getParent() != null) {
+            try {
+                Files.createDirectories(Paths.get(fileOut).getParent());
+            } catch (IOException e) {
+                System.err.println("Cannot create output file");
+                e.printStackTrace();
+                return;
+            }
+        }
         try (BufferedReader in = new BufferedReader(new FileReader(fileIn, StandardCharsets.UTF_8));
              BufferedWriter out = new BufferedWriter(new FileWriter(fileOut, StandardCharsets.UTF_8))) {
             String line;
             while ((line = in.readLine()) != null) {
                 out.write(f.apply(line));
             }
+        } catch (FileNotFoundException e) {
+            System.err.println("No such file error");
+            e.printStackTrace();
         } catch (IOException e) {
+            System.err.println("Some read\\write error occurred");
             e.printStackTrace();
         }
     }
