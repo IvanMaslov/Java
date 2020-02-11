@@ -9,7 +9,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 public class RecursiveWalk {
 
     public static void main(String[] argv) {
-        if (argv.length != 2 || argv[0] == null || argv[1] == null) {
+        if (argv == null || argv.length != 2 || argv[0] == null || argv[1] == null) {
             System.err.println("Incorrect argument: use RecursiveWalk <input file> <output file>");
             return;
         }
@@ -49,6 +49,7 @@ public class RecursiveWalk {
                     System.err.println("Invalid path: " + line);
                     out.write(Walk.formatFileOutput(0, line));
                 } catch (IOException ignore) {
+                    out.write(Walk.formatFileOutput(0, line));
                     ///file or directory not exists
                 }
             }
