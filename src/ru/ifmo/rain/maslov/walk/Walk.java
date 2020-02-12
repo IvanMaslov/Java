@@ -47,6 +47,10 @@ public class Walk {
         System.err.println("ERROR: \t" + reason + "\n\t" + e.getMessage());
     }
 
+    static void logger(String reason) {
+        System.err.println("ERROR: \t" + reason);
+    }
+
     static String formatFileOutput(int res, String fileName) {
         return String.format("%08x", res) + " " + fileName + "\n";
     }
@@ -72,7 +76,6 @@ public class Walk {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
             logger("IOException in " + fileName, e);
             return formatFileOutput(0, fileName);
         }
