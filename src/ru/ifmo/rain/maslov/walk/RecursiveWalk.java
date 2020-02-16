@@ -2,7 +2,6 @@ package ru.ifmo.rain.maslov.walk;
 
 
 import java.io.*;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 
@@ -28,7 +27,7 @@ public class RecursiveWalk {
     private static void execute(String fileIn, String fileOut) {
         try {
             Path inPath = getPathFromUser(fileIn, "Invalid input path: ");
-            Path outPath = getPathFromUser(fileIn, "Invalid output path: ");
+            Path outPath = getPathFromUser(fileOut, "Invalid output path: ");
             if (outPath.getParent() != null) {
                 try {
                     Files.createDirectories(outPath.getParent());
@@ -37,8 +36,8 @@ public class RecursiveWalk {
                     return;
                 }
             }
-            try (BufferedReader in = new BufferedReader(new FileReader(inPath.toFile(), StandardCharsets.UTF_8));
-                 BufferedWriter out = new BufferedWriter(new FileWriter(outPath.toFile(), StandardCharsets.UTF_8))) {
+            try (BufferedReader in = Files.newBufferedReader(inPath);
+                 BufferedWriter out = Files.newBufferedWriter(outPath)) {
                 String line;
                 while ((line = in.readLine()) != null) {
                     try {
