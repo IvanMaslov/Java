@@ -4,6 +4,7 @@ package ru.ifmo.rain.maslov.walk;
 import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
+import java.util.Objects;
 
 public class RecursiveWalk {
 
@@ -41,26 +42,21 @@ public class RecursiveWalk {
                 String line;
                 while ((line = in.readLine()) != null) {
                     try {
-                        Files.walkFileTree(Paths.get(line), new MyVisitor(out));
+                        Files.walkFileTree(getPathFromUser(line, "Invalid path in input file: "),
+                                new MyVisitor(out));
                     } catch (FileNotFoundException e) {
                         Walk.logger("No such path: " + line, e);
                         out.write(Walk.formatFileOutput(0, line));
                     } catch (InvalidPathException e) {
-                        Walk.logger("Invalid path: " + line, e);
                         out.write(Walk.formatFileOutput(0, line));
                     } catch (IOException ignore) {
                         Walk.logger(null, ignore);
                         out.write(Walk.formatFileOutput(0, line));
-                        ///file or directory not exists
                     }
                 }
-            } catch (FileNotFoundException e) {
-                Walk.logger("No such file error", e);
-            } catch (IOException e) {
-                Walk.logger("Some read\\write error occurred", e);
+            } catch (IOException ignored) {
             }
-        } catch (InvalidPathException e) {
-            Walk.logger("Argument error", e);
+        } catch (InvalidPathException ignored) {
         }
     }
 

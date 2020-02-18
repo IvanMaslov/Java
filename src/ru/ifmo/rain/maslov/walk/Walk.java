@@ -4,6 +4,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.function.Function;
 
@@ -56,30 +57,31 @@ public class Walk {
     }
 
     static String hash(String fileName) {
-        if(fileName == null || fileName.isBlank())
-            return formatFileOutput(0, fileName);
+        //if(fileName == null || fileName.isBlank())
+        //    return formatFileOutput(0, fileName);
         try {
-            Paths.get(fileName);
+            Path filePath = Paths.get(fileName);
+            final int FNV_32_PRIME = 0x01000193;
+            int res = 0x811c9dc5;
+            try (InputStream file = Files.newInputStream(filePath)) {
+                byte[] buf = new byte[BUFSIZE];
+                int readed;
+                for (readed = file.read(buf, 0, BUFSIZE); readed > 0; readed = file.read(buf, 0, BUFSIZE)) {
+                    for (int i = 0; i < readed; ++i) {
+                        res *= FNV_32_PRIME;
+                        res ^= buf[i] & 0xff;
+                    }
+                }
+            } catch (IOException e) {
+                logger("IOException in " + fileName, e);
+                return formatFileOutput(0, fileName);
+            }
+            return formatFileOutput(res, fileName);
         } catch (InvalidPathException e) {
             logger("Invalid path " + fileName, e);
             return formatFileOutput(0, fileName);
         }
-        final int FNV_32_PRIME = 0x01000193;
-        int res = 0x811c9dc5;
-        try (FileInputStream file = new FileInputStream(fileName)) {
-            byte[] buf = new byte[BUFSIZE];
-            int readed;
-            for (readed = file.read(buf, 0, BUFSIZE); readed > 0; readed = file.read(buf, 0, BUFSIZE)) {
-                for (int i = 0; i < readed; ++i) {
-                    res *= FNV_32_PRIME;
-                    res ^= buf[i] & 0xff;
-                }
-            }
-        } catch (IOException e) {
-            logger("IOException in " + fileName, e);
-            return formatFileOutput(0, fileName);
-        }
-        return formatFileOutput(res, fileName);
+
     }
 
 }
