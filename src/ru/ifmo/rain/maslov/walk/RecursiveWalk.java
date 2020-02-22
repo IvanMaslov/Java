@@ -74,3 +74,5 @@ public class RecursiveWalk {
         }
     }
 }
+
+// java -cp . -p . -m info.kgeorgiy.java.advanced.walk RecursiveWalk ru.ifmo.rain.maslov.walk.RecursiveWalk

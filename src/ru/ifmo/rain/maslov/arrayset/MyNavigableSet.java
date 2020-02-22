@@ -192,3 +192,5 @@ public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T>
         }
     }
 }
+
+// java -cp . -p . -m info.kgeorgiy.java.advanced.arrayset NavigableSet ru.ifmo.rain.maslov.arrayset.MyNavigableSet main
