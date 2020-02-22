@@ -3,7 +3,6 @@ package ru.ifmo.rain.maslov.student;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
 import info.kgeorgiy.java.advanced.student.StudentGroupQuery;
-import info.kgeorgiy.java.advanced.student.StudentQuery;
 
 import java.util.*;
 import java.util.stream.*;
@@ -107,24 +106,46 @@ public class StudentDB implements StudentGroupQuery {
                 ));
     }
 
+    private List<Group> getGroupBy(Collection<Student> students, Comparator<Student> comp) {
+        return students.stream()
+                .sorted(comp)
+                .collect(Collectors.groupingBy(
+                        Student::getGroup,
+                        Collectors.toList()))
+                .entrySet()
+                .stream()
+                .map(x -> new Group(x.getKey(), x.getValue()))
+                .collect(Collectors.toList());
+
+    }
+
     @Override
     public List<Group> getGroupsByName(Collection<Student> students) {
-        return null;
+        return getGroupBy(students, nameComparator.thenComparing(Student::getId));
     }
 
     @Override
     public List<Group> getGroupsById(Collection<Student> students) {
-        return null;
+        return getGroupBy(students, Comparator.comparing(Student::getId));
+    }
+
+    private String getLargestGroupBy(Collection<Student> students, Comparator<Group> comp) {
+        return getGroupsByName(students).stream().max(comp).get().getName();
     }
 
     @Override
     public String getLargestGroup(Collection<Student> students) {
-        return null;
+        return getLargestGroupBy(students, Comparator.comparingInt(a -> a.getStudents().size()));
     }
 
     @Override
     public String getLargestGroupFirstName(Collection<Student> students) {
-        return null;
+        return getLargestGroupBy(students, Comparator.comparingLong(a ->
+                a.getStudents()
+                        .stream()
+                        .map(Student::getFirstName)
+                        .distinct()
+                        .count()));
     }
 }
 
