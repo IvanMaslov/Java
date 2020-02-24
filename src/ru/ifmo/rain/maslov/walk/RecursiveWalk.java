@@ -5,77 +5,88 @@ import java.io.*;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
 
+
 public class RecursiveWalk {
     private static final int BUFSIZE = 1024;
 
-    public static void main(String[] argv) {
-        if (argv == null) {
-            logger("Incorrect argument: argv is null");
-            return;
+    static class RecursiveWalkException extends Exception {
+        RecursiveWalkException(String s, Exception e) {
+            super(s + "\n" + e.getMessage());
         }
-        if (argv.length != 2) {
-            logger("Incorrect argument: argv length is not equal 2");
-            return;
+
+        RecursiveWalkException(String s) {
+            super(s);
         }
-        if (argv[0] == null) {
-            logger("Incorrect argument: first argument is null");
-            return;
+
+        RecursiveWalkException(Exception s) {
+            this(s.getMessage(), s);
         }
-        if (argv[1] == null) {
-            logger("Incorrect argument: second argument is null");
-            return;
+
+        void print() {
+            System.err.println(getMessage());
         }
-        execute(argv[0], argv[1]);
     }
 
-    private static Path getPathFromUser(String str, String toLog) throws InvalidPathException {
+    public static void main(String[] argv) {
+        try {
+            if (argv == null) {
+                throw new RecursiveWalkException("Incorrect argument: argv is null");
+            }
+            if (argv.length != 2) {
+                throw new RecursiveWalkException("Incorrect argument: argv length is not equal 2");
+            }
+            if (argv[0] == null) {
+                throw new RecursiveWalkException("Incorrect argument: first argument is null");
+            }
+            if (argv[1] == null) {
+                throw new RecursiveWalkException("Incorrect argument: second argument is null");
+            }
+            execute(argv[0], argv[1]);
+        } catch (RecursiveWalkException e) {
+            e.print();
+        }
+
+    }
+
+    private static Path getPathFromUser(String str, String toLog) throws RecursiveWalkException {
         try {
             return Paths.get(str);
         } catch (InvalidPathException e) {
-            logger(toLog + str, e);
-            throw e;
+            throw new RecursiveWalkException(toLog + str, e);
         }
     }
 
-    private static void execute(String fileIn, String fileOut) {
-        try {
-            Path inPath = getPathFromUser(fileIn, "Invalid input path: ");
-            Path outPath = getPathFromUser(fileOut, "Invalid output path: ");
-            if (outPath.getParent() != null) {
-                try {
-                    Files.createDirectories(outPath.getParent());
-                } catch (IOException e) {
-                    logger("Cannot create output file directories: " + fileOut, e);
-                    return;
-                }
+    private static void execute(String fileIn, String fileOut) throws RecursiveWalkException {
+        Path inPath = getPathFromUser(fileIn, "Invalid input path: ");
+        Path outPath = getPathFromUser(fileOut, "Invalid output path: ");
+        if (outPath.getParent() != null) {
+            try {
+                Files.createDirectories(outPath.getParent());
+            } catch (IOException e) {
+                throw new RecursiveWalkException("Cannot create output file directories: " + fileOut, e);
             }
-            try (BufferedReader in = Files.newBufferedReader(inPath);
-                 BufferedWriter out = Files.newBufferedWriter(outPath)) {
+        }
+        try (BufferedReader in = Files.newBufferedReader(inPath)) {
+            try (BufferedWriter out = Files.newBufferedWriter(outPath)) {
                 String line;
-                while ((line = in.readLine()) != null) {
-                    try {
-                        Files.walkFileTree(getPathFromUser(line, "Invalid path in input file: "),
-                                new MyVisitor(out));
-                    } catch (InvalidPathException e) {
-                        out.write(formatFileOutput(0, line));
-                    } catch (IOException ignore) {
-                        logger("Missed file: " + line, ignore);
-                        out.write(formatFileOutput(0, line));
+                try {
+                    while ((line = in.readLine()) != null) {
+                        try {
+                            Files.walkFileTree(Paths.get(line),
+                                    new MyVisitor(out));
+                        } catch (InvalidPathException e) {
+                            out.write(formatFileOutput(0, line));
+                        }
                     }
+                } catch (IOException e) {
+                    throw new RecursiveWalkException(e);
                 }
-            } catch (IOException ignored) {
+            } catch (IOException e) {
+                throw new RecursiveWalkException("Output file error: ", e);
             }
-        } catch (InvalidPathException ignored) {
+        } catch (IOException e) {
+            throw new RecursiveWalkException("Input file error: ", e);
         }
-    }
-
-
-    private static void logger(String reason, Exception e) {
-        System.err.println("ERROR: \t" + reason + "\n\t" + e.getMessage());
-    }
-
-    private static void logger(String reason) {
-        System.err.println("ERROR: \t" + reason);
     }
 
     private static String formatFileOutput(int res, String fileName) {
@@ -96,7 +107,6 @@ public class RecursiveWalk {
                 }
             }
         } catch (IOException e) {
-            logger("Reading fail in " + filePath.toString(), e);
             res = 0;
         }
         return formatFileOutput(res, filePath.toString());
@@ -112,12 +122,13 @@ public class RecursiveWalk {
 
         @Override
         public FileVisitResult visitFile(Path path, BasicFileAttributes attrs) throws IOException {
-            try{
-                writer.write(hash(path));
-            } catch (IOException e) {
-                logger("Fail to write output file", e);
-                return  FileVisitResult.TERMINATE;
-            }
+            writer.write(hash(path));
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult visitFileFailed(Path path, IOException e) throws IOException {
+            writer.write(formatFileOutput(0, path.toString()));
             return FileVisitResult.CONTINUE;
         }
     }

@@ -10,6 +10,7 @@ import java.util.function.Predicate;
 import java.util.stream.*;
 
 public class StudentDB implements StudentGroupQuery {
+    //TODO: inline
     private Comparator<Student> nameComparator =
             Comparator.comparing(Student::getLastName)
                     .thenComparing(Student::getFirstName);
@@ -64,8 +65,8 @@ public class StudentDB implements StudentGroupQuery {
     public String getMinStudentFirstName(List<Student> students) {
         return students.stream()
                 .min(Comparator.comparing(Student::getId))
-                .get()
-                .getFirstName();
+                .map(Student::getFirstName)
+                .orElse("");
     }
 
     @Override
@@ -120,8 +121,8 @@ public class StudentDB implements StudentGroupQuery {
     private String getLargestGroupBy(Collection<Student> students, Comparator<Group> comp) {
         return getGroupsByName(students).stream()
                 .max(comp)
-                .get()
-                .getName();
+                .map(Group::getName)
+                .orElse("");
     }
 
     @Override
