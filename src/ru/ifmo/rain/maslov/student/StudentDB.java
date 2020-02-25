@@ -1,5 +1,6 @@
 package ru.ifmo.rain.maslov.student;
 
+import info.kgeorgiy.java.advanced.student.AdvancedStudentGroupQuery;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
 import info.kgeorgiy.java.advanced.student.StudentGroupQuery;
@@ -9,13 +10,16 @@ import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.*;
 
-public class StudentDB implements StudentGroupQuery {
+public class StudentDB implements AdvancedStudentGroupQuery {
     //TODO: inline
     private Comparator<Student> nameComparator =
             Comparator.comparing(Student::getLastName)
                     .thenComparing(Student::getFirstName);
     private Comparator<Student> studentComparator =
             nameComparator.thenComparing(Student::getId);
+    private Comparator<Group> groupComp =
+            Comparator.comparing(Group::getName);
+    private Function<Student, String> studentFullName = x -> x.getFirstName() + " " + x.getLastName();
 
     private List<String> getSome(List<Student> students, Function<Student, String> getter) {
         return students.stream()
@@ -53,7 +57,7 @@ public class StudentDB implements StudentGroupQuery {
 
     @Override
     public List<String> getFullNames(List<Student> students) {
-        return getSome(students, x -> x.getFirstName() + " " + x.getLastName());
+        return getSome(students, studentFullName);
     }
 
     @Override
@@ -114,6 +118,7 @@ public class StudentDB implements StudentGroupQuery {
                 .entrySet()
                 .stream()
                 .map(x -> new Group(x.getKey(), x.getValue()))
+                .sorted(groupComp)
                 .collect(Collectors.toList());
 
     }
@@ -148,6 +153,47 @@ public class StudentDB implements StudentGroupQuery {
                         .map(Student::getFirstName)
                         .distinct()
                         .count()));
+    }
+
+    private List<String> getStudentById(Map<Integer, String> students,
+                                        int[] indices) {
+        return IntStream.of(indices)
+                .boxed()
+                .map(x -> students.getOrDefault(x, ""))
+                .collect(Collectors.toList());
+    }
+
+    private Map<Integer, String> idMap(Collection<Student> students, Function<Student, String> property) {
+        return students.stream().collect(Collectors.toMap(Student::getId, property));
+    }
+
+    @Override
+    public String getMostPopularName(Collection<Student> students) {
+        return students.stream()
+                .max(Comparator.comparing(Student::getFirstName)
+                        .thenComparing(Student::getId))
+                .map(studentFullName)
+                .orElse("");
+    }
+
+    @Override
+    public List<String> getFirstNames(Collection<Student> students, int[] indices) {
+        return getStudentById(idMap(students, Student::getFirstName), indices);
+    }
+
+    @Override
+    public List<String> getLastNames(Collection<Student> students, int[] indices) {
+        return getStudentById(idMap(students, Student::getLastName), indices);
+    }
+
+    @Override
+    public List<String> getGroups(Collection<Student> students, int[] indices) {
+        return getStudentById(idMap(students, Student::getGroup), indices);
+    }
+
+    @Override
+    public List<String> getFullNames(Collection<Student> students, int[] indices) {
+        return getStudentById(idMap(students, studentFullName), indices);
     }
 }
 
