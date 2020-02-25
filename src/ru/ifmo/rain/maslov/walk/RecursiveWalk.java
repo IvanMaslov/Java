@@ -9,17 +9,13 @@ import java.nio.file.attribute.BasicFileAttributes;
 public class RecursiveWalk {
     private static final int BUFSIZE = 1024;
 
-    private static class RecursiveWalkException extends Exception {
+    static class RecursiveWalkException extends Exception {
         RecursiveWalkException(String s, Exception e) {
             super(s + "\n" + e.getMessage());
         }
 
         RecursiveWalkException(String s) {
             super(s);
-        }
-
-        RecursiveWalkException(Exception s) {
-            this(s.getMessage());
         }
 
         void print() {
@@ -69,27 +65,28 @@ public class RecursiveWalk {
             }
         }
 
-        try (BufferedReader in = Files.newBufferedReader(inPath)) {
-            try (BufferedWriter out = Files.newBufferedWriter(outPath)) {
-                try {
-                    MyVisitor visitor = new MyVisitor(out);
-                    String line;
-                    while ((line = in.readLine()) != null) {
+        try (BufferedWriter out = Files.newBufferedWriter(outPath)) {
+            try (BufferedReader in = Files.newBufferedReader(inPath)) {
+                MyVisitor visitor = new MyVisitor(out);
+                String line;
+                while ((line = in.readLine()) != null) {
+                    try {
                         try {
                             Files.walkFileTree(Paths.get(line), visitor);
                         } catch (InvalidPathException e) {
                             out.write(formatFileOutput(0, line));
                         }
+                    } catch (IOException e) {
+                        throw new RecursiveWalkException("Output file write error", e);
                     }
-                } catch (IOException e) {
-                    throw new RecursiveWalkException(e);
                 }
             } catch (IOException e) {
-                throw new RecursiveWalkException("Output file error: ", e);
+                throw new RecursiveWalkException("Input file error: ", e);
             }
         } catch (IOException e) {
-            throw new RecursiveWalkException("Input file error: ", e);
+            throw new RecursiveWalkException("Output file error: ", e);
         }
+
     }
 
     private static String formatFileOutput(int res, String fileName) {
@@ -101,10 +98,8 @@ public class RecursiveWalk {
         int res = 0x811c9dc5;
         try (InputStream file = Files.newInputStream(filePath)) {
             byte[] buf = new byte[BUFSIZE];
-            int readed;
-            for (readed = file.read(buf, 0, BUFSIZE); readed > 0;
-                 readed = file.read(buf, 0, BUFSIZE)) {
-                for (int i = 0; i < readed; ++i) {
+            for (int read = 0; read >= 0; read = file.read(buf, 0, BUFSIZE)) {
+                for (int i = 0; i < read; ++i) {
                     res *= FNV_32_PRIME;
                     res ^= buf[i] & 0xff;
                 }

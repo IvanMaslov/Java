@@ -167,9 +167,24 @@ public class StudentDB implements AdvancedStudentGroupQuery {
         return students.stream().collect(Collectors.toMap(Student::getId, property));
     }
 
+    private Map<String, Integer> nameMap(Collection<Student> students) {
+        return students.stream()
+                .collect(Collectors.groupingBy(studentFullName,
+                        Collectors.mapping(Student::getGroup,
+                                Collectors.collectingAndThen(Collectors.toSet(), Set::size))));
+    }
+
+    private Optional<String> getPriorityStudent(Collection<Student> students, Map<String, Integer> priority) {
+        return students.stream()
+                .max(Comparator.comparingInt(
+                        (Student x) -> priority.getOrDefault(studentFullName.apply(x), -1))
+                        .thenComparing(nameComparator))
+                .map(studentFullName);
+    }
+
     @Override
     public String getMostPopularName(Collection<Student> students) {
-        return null;
+        return getPriorityStudent(students, nameMap(students)).orElse("");
     }
 
     @Override
