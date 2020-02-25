@@ -169,11 +169,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public String getMostPopularName(Collection<Student> students) {
-        return students.stream()
-                .max(Comparator.comparing(Student::getFirstName)
-                        .thenComparing(Student::getId))
-                .map(studentFullName)
-                .orElse("");
+        return null;
     }
 
     @Override

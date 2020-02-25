@@ -9,7 +9,7 @@ import java.nio.file.attribute.BasicFileAttributes;
 public class RecursiveWalk {
     private static final int BUFSIZE = 1024;
 
-    static class RecursiveWalkException extends Exception {
+    private static class RecursiveWalkException extends Exception {
         RecursiveWalkException(String s, Exception e) {
             super(s + "\n" + e.getMessage());
         }
@@ -19,7 +19,7 @@ public class RecursiveWalk {
         }
 
         RecursiveWalkException(Exception s) {
-            this(s.getMessage(), s);
+            this(s.getMessage());
         }
 
         void print() {
@@ -59,21 +59,24 @@ public class RecursiveWalk {
     private static void execute(String fileIn, String fileOut) throws RecursiveWalkException {
         Path inPath = getPathFromUser(fileIn, "Invalid input path: ");
         Path outPath = getPathFromUser(fileOut, "Invalid output path: ");
-        if (outPath.getParent() != null) {
+
+        Path parent = outPath.getParent();
+        if (parent != null) {
             try {
-                Files.createDirectories(outPath.getParent());
+                Files.createDirectories(parent);
             } catch (IOException e) {
                 throw new RecursiveWalkException("Cannot create output file directories: " + fileOut, e);
             }
         }
+
         try (BufferedReader in = Files.newBufferedReader(inPath)) {
             try (BufferedWriter out = Files.newBufferedWriter(outPath)) {
-                String line;
                 try {
+                    MyVisitor visitor = new MyVisitor(out);
+                    String line;
                     while ((line = in.readLine()) != null) {
                         try {
-                            Files.walkFileTree(Paths.get(line),
-                                    new MyVisitor(out));
+                            Files.walkFileTree(Paths.get(line), visitor);
                         } catch (InvalidPathException e) {
                             out.write(formatFileOutput(0, line));
                         }
