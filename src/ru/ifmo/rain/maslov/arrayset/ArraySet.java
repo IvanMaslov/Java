@@ -2,32 +2,35 @@ package ru.ifmo.rain.maslov.arrayset;
 
 import java.util.*;
 
-public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T> {
+public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     private final List<T> elements;
     private final Comparator<? super T> comp;
 
-    public MyNavigableSet() {
+    public ArraySet() {
         this(Collections.emptyList());
     }
 
-    public MyNavigableSet(Collection<T> collection) {
+    public ArraySet(Collection<T> collection) {
         this(collection, null);
     }
 
-    public MyNavigableSet(Collection<T> collection, Comparator<? super T> comp) {
+    public ArraySet(Collection<T> collection, Comparator<? super T> comp) {
         this(new ArrayList<>(collection), comp);
     }
 
-    public MyNavigableSet(List<T> elements, Comparator<? super T> comp) {
-        TreeSet<T> tree = new TreeSet<T>(comp);
-        tree.addAll(elements);
-        this.elements = new ArrayList<>(tree);
-        this.comp = comp;
+    public ArraySet(List<T> elements, Comparator<? super T> comp) {
+        this(elements, comp, true);
     }
 
-    private MyNavigableSet(List<T> elements, Comparator<? super T> comp, boolean sort) {
+    private ArraySet(List<T> elements, Comparator<? super T> comp, boolean sort) {
         if (sort) {
-            elements.sort(comp);
+            TreeSet<T> tree = new TreeSet<>(comp);
+            tree.addAll(elements);
+            elements = new ArrayList<>(tree);
+        } else {
+            if (elements instanceof ReverseList
+                    && ((ReverseList<T>) elements).elements instanceof ReverseList)
+                elements = ((ReverseList<T>) ((ReverseList<T>) elements).elements).elements;
         }
         this.elements = elements;
         this.comp = comp;
@@ -67,17 +70,17 @@ public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T>
     }
 
     @Override
-    public MyNavigableSet<T> subSet(T fromElement, T toElement) {
+    public ArraySet<T> subSet(T fromElement, T toElement) {
         return subSet(fromElement, true, toElement, false);
     }
 
     @Override
-    public MyNavigableSet<T> headSet(T toElement) {
+    public ArraySet<T> headSet(T toElement) {
         return headSet(toElement, false);
     }
 
     @Override
-    public MyNavigableSet<T> tailSet(T fromElement) {
+    public ArraySet<T> tailSet(T fromElement) {
         return tailSet(fromElement, true);
     }
 
@@ -129,9 +132,9 @@ public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T>
     }
 
     @Override
-    public MyNavigableSet<T> descendingSet() {
-        return new MyNavigableSet<>(new ReverseList<>(true, elements),
-                comp == null ? Collections.reverseOrder() : comp.reversed());
+    public ArraySet<T> descendingSet() {
+        return new ArraySet<>((new ReverseList<>(elements)),
+                comp == null ? Collections.reverseOrder() : comp.reversed(), false);
     }
 
     @Override
@@ -140,7 +143,9 @@ public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T>
     }
 
     @Override
-    public MyNavigableSet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
+    public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
+//        if (Collections.min(List.of(fromElement, toElement), comp) != fromElement)
+//            throw new IllegalArgumentException();
         if (comp == null
                 && fromElement instanceof Comparable
                 && ((Comparable) fromElement).compareTo(toElement) > 0)
@@ -150,40 +155,36 @@ public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T>
         return tailSet(fromElement, fromInclusive).headSet(toElement, toInclusive);
     }
 
-    @Override
-    public MyNavigableSet<T> headSet(T toElement, boolean inclusive) {
-        int to = Collections.binarySearch(elements, toElement, comp);
-        if (to < 0) to = ~to;
-        else if (inclusive) ++to;
-        if (to < 0) return new MyNavigableSet<>(new ArrayList<>(), comp);
-        return new MyNavigableSet<T>(elements.subList(0, to), comp, false);
+    private ArraySet<T> emptySet() {
+        return new ArraySet<>(new ArrayList<>(), comp);
+    }
+
+    private ArraySet<T> subSet(int from, int to) {
+        return new ArraySet<>(elements.subList(from, to), comp, false);
     }
 
     @Override
-    public MyNavigableSet<T> tailSet(T fromElement, boolean inclusive) {
-        int from = Collections.binarySearch(elements, fromElement, comp);
-        if (from < 0) from = ~from;
-        else if (!inclusive) ++from;
-        if (from > elements.size()) return new MyNavigableSet<>(new ArrayList<>(), comp);
-        return new MyNavigableSet<T>(elements.subList(from, elements.size()), comp, false);
+    public ArraySet<T> headSet(T toElement, boolean inclusive) {
+        int to = indexCalc(toElement, inclusive ? 1 : 0, 0);
+        return to < 0 ? emptySet() : subSet(0, to);
     }
 
-    class ReverseList<T> extends AbstractList<T> {
-        private boolean reversed;
-        final private List<T> elements;
+    @Override
+    public ArraySet<T> tailSet(T fromElement, boolean inclusive) {
+        int from = indexCalc(fromElement, inclusive ? 0 : 1, 0);
+        return from > size() ? emptySet() : subSet(from, size());
+    }
 
-        ReverseList(boolean reversed, List<T> elements) {
-            this.reversed = reversed;
+    class ReverseList<D> extends AbstractList<D> {
+        final private List<D> elements;
+
+        ReverseList(List<D> elements) {
             this.elements = elements;
         }
 
-        public void reverse() {
-            reversed = !reversed;
-        }
-
         @Override
-        public T get(int index) {
-            return reversed ? elements.get(index) : elements.get(elements.size() - 1 - index);
+        public D get(int index) {
+            return elements.get(elements.size() - 1 - index);
         }
 
         @Override
@@ -193,4 +194,4 @@ public class MyNavigableSet<T> extends AbstractSet<T> implements NavigableSet<T>
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.arrayset NavigableSet ru.ifmo.rain.maslov.arrayset.MyNavigableSet main
+// java -cp . -p . -m info.kgeorgiy.java.advanced.arrayset NavigableSet ru.ifmo.rain.maslov.arrayset.ArraySet main
