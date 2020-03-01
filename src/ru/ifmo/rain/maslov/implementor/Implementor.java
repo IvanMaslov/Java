@@ -7,6 +7,7 @@ import ru.ifmo.rain.maslov.arrayset.ArraySet;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
+import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
@@ -75,12 +76,12 @@ public class Implementor implements Impler {
             throw new ImplerException(new IllegalArgumentException("Null arguments"));
         if (token.isPrimitive()
                 || token.isArray()
-                || token.equals(Enum.class)
+                || token == Enum.class
                 || Modifier.isFinal(token.getModifiers()))
             throw new ImplerException("Unimplementable class");
-            root = root
-                    .resolve(token.getPackageName().replace('.', File.separatorChar))
-                    .resolve(getClassName(token) + ".java");
+        root = root
+                .resolve(token.getPackageName().replace('.', File.separatorChar))
+                .resolve(getClassName(token) + ".java");
         Path parent = root.getParent();
         if (parent != null) {
             try {
@@ -92,6 +93,8 @@ public class Implementor implements Impler {
         try (Writer writer = Files.newBufferedWriter(root)) {
             implHead(token, writer);
             implMethods(token, writer);
+            if (!token.isInterface())
+                implConstructor(token, writer);
             write(writer, "}" + lineSeparator);
         } catch (IOException e) {
             throw new ImplerException("Cannot open result file", e);
@@ -116,7 +119,7 @@ public class Implementor implements Impler {
         }
         ans.append("public class ")
                 .append(getClassName(token))
-                .append(token.isInterface() ? " implements " : "extends ")
+                .append(token.isInterface() ? " implements " : " extends ")
                 .append(token.getSimpleName())
                 .append(" {")
                 .append(lineSeparator);
@@ -165,8 +168,16 @@ public class Implementor implements Impler {
     }
 
     private void implConstructor(Class<?> token, Writer writer) throws ImplerException {
-
+        Constructor<?>[] constructors = Arrays.stream(token.getConstructors())
+                .filter(constructor -> !Modifier.isPrivate(constructor.getModifiers()))
+                .toArray(Constructor[]::new);
+        if (constructors.length == 0) {
+            throw new ImplerException("No valid constructor");
+        }
+        for (Constructor<?> constructor : constructors) {
+            implExecutable(token, writer, constructor);
+        }
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor interface ru.ifmo.rain.maslov.implementor.Implementor hello
+// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor class ru.ifmo.rain.maslov.implementor.Implementor hello
