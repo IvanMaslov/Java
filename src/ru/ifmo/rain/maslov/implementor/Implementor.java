@@ -12,9 +12,8 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 public class Implementor implements Impler {
 
@@ -22,6 +21,50 @@ public class Implementor implements Impler {
 
     private String getClassName(Class<?> token) {
         return token.getSimpleName() + "Impl";
+    }
+
+    private String tabN(int n) {
+        return Stream.generate(() -> "\t").limit(n).collect(Collectors.joining());
+    }
+
+    private String getDefaultValue(Class<?> token) {
+        if (token.equals(void.class)) return "";
+        if (token.equals(boolean.class)) return " false";
+        if (token.isPrimitive()) return " 0";
+        return " null";
+    }
+
+    private String getParams(Executable exec, boolean typed) {
+        return Arrays.stream(exec.getParameters())
+                .map(parameter ->
+                        (typed ? parameter.getType().getCanonicalName() + " " : "")
+                                + parameter.getName()
+                ).collect(Collectors.joining(", ", "(", ")"));
+    }
+
+    private String getExceptions(Executable exec) {
+        Class<?>[] exceptions = exec.getExceptionTypes();
+        if (exceptions.length == 0)
+            return "";
+        return Arrays.stream(exceptions)
+                .map(Class::getCanonicalName)
+                .collect(Collectors.joining(", ", " throws ", ""));
+    }
+
+    private String getMethodName(Class<?> token, Executable exec) {
+        if (exec instanceof Method) {
+            Method method = (Method) exec;
+            return method.getReturnType().getCanonicalName() + " " + method.getName();
+        }
+        return getClassName(token);
+    }
+
+    private String getMethodBody(Method exec) {
+        return "return " + getDefaultValue(exec.getReturnType());
+    }
+
+    private String getMethodBody(Executable exec) {
+        return "super " + getParams(exec, false);
     }
 
     @Override
@@ -42,9 +85,17 @@ public class Implementor implements Impler {
         try (Writer writer = Files.newBufferedWriter(root)) {
             implHead(token, writer);
             implMethods(token, writer);
-            implTail(token, writer);
+            write(writer, "}" + lineSeparator);
         } catch (IOException e) {
             throw new ImplerException("Cannot open result file", e);
+        }
+    }
+
+    private void write(Writer writer, String str) throws ImplerException {
+        try {
+            writer.write(str);
+        } catch (IOException e) {
+            throw new ImplerException("Write output file fail", e);
         }
     }
 
@@ -62,20 +113,29 @@ public class Implementor implements Impler {
                 .append(token.getSimpleName())
                 .append(" {")
                 .append(lineSeparator);
-        try {
-            writer.write(ans.toString());
-        } catch (IOException e) {
-            throw new ImplerException("Write output file fail", e);
-        }
+        write(writer, ans.toString());
     }
 
-    private void implTail(Class<?> token, Writer writer) throws ImplerException {
-        try {
-            writer.write("}");
-            writer.write(lineSeparator);
-        } catch (IOException e) {
-            throw new ImplerException("Write output file fail", e);
-        }
+    private void implExecutable(Class<?> token, Writer writer, Executable exec) throws ImplerException {
+        StringBuilder res = new StringBuilder(tabN(1));
+        final int mod = exec.getModifiers()
+                & ~Modifier.ABSTRACT
+                & ~Modifier.NATIVE
+                & ~Modifier.TRANSIENT;
+        res.append(Modifier.toString(mod))
+                .append(getMethodName(token, exec))
+                .append(getParams(exec, true))
+                .append(getExceptions(exec))
+                .append("{")
+                .append(lineSeparator)
+                .append(tabN(2))
+                .append(getMethodBody(exec))
+                .append(";")
+                .append(lineSeparator)
+                .append(tabN(1))
+                .append("}")
+                .append(lineSeparator);
+        write(writer, res.toString());
     }
 
     private void implMethods(Class<?> token, Writer writer) throws ImplerException {
