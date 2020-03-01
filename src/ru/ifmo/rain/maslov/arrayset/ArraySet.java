@@ -87,13 +87,13 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     @Override
     public T first() {
         check();
-        return elements.get(0);
+        return getElem(0);
     }
 
     @Override
     public T last() {
         check();
-        return elements.get(elements.size() - 1);
+        return getElem(elements.size() - 1);
     }
 
     @Override
@@ -146,11 +146,10 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
 //        if (Collections.min(List.of(fromElement, toElement), comp) != fromElement)
 //            throw new IllegalArgumentException();
-        if (comp == null
+        if ((comp == null
                 && fromElement instanceof Comparable
                 && ((Comparable) fromElement).compareTo(toElement) > 0)
-            throw new IllegalArgumentException();
-        if (comp != null && comp.compare(fromElement, toElement) > 0)
+                || (comp != null && comp.compare(fromElement, toElement) > 0))
             throw new IllegalArgumentException();
         return tailSet(fromElement, fromInclusive).headSet(toElement, toInclusive);
     }

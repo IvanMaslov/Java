@@ -3,7 +3,6 @@ package ru.ifmo.rain.maslov.student;
 import info.kgeorgiy.java.advanced.student.AdvancedStudentGroupQuery;
 import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
-import info.kgeorgiy.java.advanced.student.StudentGroupQuery;
 
 import java.util.*;
 import java.util.function.Function;
@@ -12,14 +11,17 @@ import java.util.stream.*;
 
 public class StudentDB implements AdvancedStudentGroupQuery {
     //TODO: inline
-    private Comparator<Student> nameComparator =
+    private final static Comparator<Student> nameComparator =
             Comparator.comparing(Student::getLastName)
                     .thenComparing(Student::getFirstName);
-    private Comparator<Student> studentComparator =
+    private final static Comparator<Student> studentComparator =
             nameComparator.thenComparing(Student::getId);
-    private Comparator<Group> groupComp =
+    private final static Comparator<Group> groupComp =
             Comparator.comparing(Group::getName);
-    private Function<Student, String> studentFullName = x -> x.getFirstName() + " " + x.getLastName();
+
+    private static String studentFullName(Student x) {
+        return x.getFirstName() + " " + x.getLastName();
+    }
 
     private List<String> getSome(List<Student> students, Function<Student, String> getter) {
         return students.stream()
@@ -57,7 +59,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<String> getFullNames(List<Student> students) {
-        return getSome(students, studentFullName);
+        return getSome(students, StudentDB::studentFullName);
     }
 
     @Override
@@ -155,8 +157,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                         .count()));
     }
 
-    private List<String> getStudentById(Map<Integer, String> students,
-                                        int[] indices) {
+    private List<String> getStudentById(Map<Integer, String> students, int[] indices) {
         return IntStream.of(indices)
                 .boxed()
                 .map(x -> students.getOrDefault(x, ""))
@@ -169,24 +170,23 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     private Map<String, Integer> nameMap(Collection<Student> students) {
         return students.stream()
-                .collect(Collectors.groupingBy(studentFullName,
+                .collect(Collectors.groupingBy(StudentDB::studentFullName,
                         Collectors.mapping(Student::getGroup,
                                 Collectors.collectingAndThen(Collectors.toSet(), Set::size))));
     }
 
-    private String getPriorityStudent(Collection<Student> students, Map<String, Integer> priority, Collection<Group> groups) {
-
-            return students.stream()
+    private String getPriorityStudent(Collection<Student> students, Map<String, Integer> priority) {
+        return students.stream()
                 .max(Comparator.comparing(
-                        (Student x) -> priority.getOrDefault(studentFullName.apply(x), -1))
-                        .thenComparing(studentFullName))
-                .map(studentFullName)
+                        (Student x) -> priority.getOrDefault(studentFullName(x), -1))
+                        .thenComparing(StudentDB::studentFullName))
+                .map(StudentDB::studentFullName)
                 .orElse("");
     }
 
     @Override
     public String getMostPopularName(Collection<Student> students) {
-        return getPriorityStudent(students, nameMap(students), getGroupsByName(students));
+        return getPriorityStudent(students, nameMap(students));
     }
 
     @Override
@@ -206,8 +206,8 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<String> getFullNames(Collection<Student> students, int[] indices) {
-        return getStudentById(idMap(students, studentFullName), indices);
+        return getStudentById(idMap(students, StudentDB::studentFullName), indices);
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.student StudentGroupQuery  ru.ifmo.rain.maslov.student.StudentDB hello
+// java -cp . -p . -m info.kgeorgiy.java.advanced.student AdvancedStudentGroupQuery  ru.ifmo.rain.maslov.student.StudentDB hello
