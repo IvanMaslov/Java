@@ -2,7 +2,6 @@ package ru.ifmo.rain.maslov.implementor;
 
 import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
-import ru.ifmo.rain.maslov.arrayset.ArraySet;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +14,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -22,6 +22,36 @@ import java.util.stream.Stream;
 public class Implementor implements Impler {
 
     private static final String lineSeparator = System.lineSeparator();
+
+    static class MethodWrap {
+        private final Method method;
+
+        private MethodWrap(Method method) {
+            this.method = method;
+        }
+
+        Method getMethod() {
+            return method;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            MethodWrap that = (MethodWrap) o;
+            return Objects.equals(method.getName(), that.method.getName())
+                    && Objects.equals(method.getReturnType(), that.method.getReturnType())
+                    && Arrays.equals(method.getParameterTypes(), that.method.getParameterTypes());
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(
+                    method.getName().hashCode(),
+                    method.getReturnType().hashCode(),
+                    Arrays.hashCode(method.getParameterTypes()));
+        }
+    }
 
     private String getClassName(Class<?> token) {
         return token.getSimpleName() + "Impl";
@@ -149,21 +179,22 @@ public class Implementor implements Impler {
         write(writer, res.toString());
     }
 
-    private void getAbstractMethods(Method[] methods, Set<Method> set) {
+    private void getAbstractMethods(Method[] methods, Set<MethodWrap> set) {
         Arrays.stream(methods)
                 .filter(method -> Modifier.isAbstract(method.getModifiers()))
+                .map(MethodWrap::new)
                 .collect(Collectors.toCollection(() -> set));
     }
 
     private void implMethods(Class<?> token, Writer writer) throws ImplerException {
-        Set<Method> methods = new HashSet<>();
+        Set<MethodWrap> methods = new HashSet<>();
         getAbstractMethods(token.getMethods(), methods);
         while (token != null) {
             getAbstractMethods(token.getDeclaredMethods(), methods);
             token = token.getSuperclass();
         }
-        for (Method exec : methods) {
-            implExecutable(null, writer, exec);
+        for (MethodWrap exec : methods) {
+            implExecutable(null, writer, exec.getMethod());
         }
     }
 
