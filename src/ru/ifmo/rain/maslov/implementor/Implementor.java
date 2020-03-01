@@ -2,6 +2,7 @@ package ru.ifmo.rain.maslov.implementor;
 
 import info.kgeorgiy.java.advanced.implementor.Impler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
+import ru.ifmo.rain.maslov.arrayset.ArraySet;
 
 import java.io.File;
 import java.io.IOException;
@@ -12,6 +13,8 @@ import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -59,21 +62,25 @@ public class Implementor implements Impler {
         return getClassName(token);
     }
 
-    private String getMethodBody(Method exec) {
-        return "return " + getDefaultValue(exec.getReturnType());
-    }
-
     private String getMethodBody(Executable exec) {
-        return "super " + getParams(exec, false);
+        if (exec instanceof Method) {
+            return "return " + getDefaultValue(((Method) exec).getReturnType());
+        }
+        return "super" + getParams(exec, false);
     }
 
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
         if (root == null || token == null)
             throw new ImplerException(new IllegalArgumentException("Null arguments"));
-        root = root
-                .resolve(token.getPackageName().replace('.', File.separatorChar))
-                .resolve(getClassName(token) + ".java");
+        if (token.isPrimitive()
+                || token.isArray()
+                || token.equals(Enum.class)
+                || Modifier.isFinal(token.getModifiers()))
+            throw new ImplerException("Unimplementable class");
+            root = root
+                    .resolve(token.getPackageName().replace('.', File.separatorChar))
+                    .resolve(getClassName(token) + ".java");
         Path parent = root.getParent();
         if (parent != null) {
             try {
@@ -123,6 +130,7 @@ public class Implementor implements Impler {
                 & ~Modifier.NATIVE
                 & ~Modifier.TRANSIENT;
         res.append(Modifier.toString(mod))
+                .append(" ")
                 .append(getMethodName(token, exec))
                 .append(getParams(exec, true))
                 .append(getExceptions(exec))
@@ -138,7 +146,25 @@ public class Implementor implements Impler {
         write(writer, res.toString());
     }
 
+    private void getAbstractMethods(Method[] methods, Set<Method> set) {
+        Arrays.stream(methods)
+                .filter(method -> Modifier.isAbstract(method.getModifiers()))
+                .collect(Collectors.toCollection(() -> set));
+    }
+
     private void implMethods(Class<?> token, Writer writer) throws ImplerException {
+        Set<Method> methods = new HashSet<>();
+        getAbstractMethods(token.getMethods(), methods);
+        while (token != null) {
+            getAbstractMethods(token.getDeclaredMethods(), methods);
+            token = token.getSuperclass();
+        }
+        for (Method exec : methods) {
+            implExecutable(null, writer, exec);
+        }
+    }
+
+    private void implConstructor(Class<?> token, Writer writer) throws ImplerException {
 
     }
 }
