@@ -23,7 +23,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
         return x.getFirstName() + " " + x.getLastName();
     }
 
-    private List<String> getSome(List<Student> students, Function<Student, String> getter) {
+    private static List<String> getSome(List<Student> students, Function<Student, String> getter) {
         return students.stream()
                 .map(getter)
                 .collect(Collectors.toList());
@@ -157,15 +157,16 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                         .count()));
     }
 
-    private List<String> getStudentById(Map<Integer, String> students, int[] indices) {
-        return IntStream.of(indices)
-                .boxed()
-                .map(x -> students.getOrDefault(x, ""))
+    private List<String> getStudentById(List<String> students, int[] indices) {
+        return Arrays.stream(indices)
+                .mapToObj(students::get)
                 .collect(Collectors.toList());
     }
 
-    private Map<Integer, String> idMap(Collection<Student> students, Function<Student, String> property) {
-        return students.stream().collect(Collectors.toMap(Student::getId, property));
+    private List<String> idMap(Collection<Student> students, Function<Student, String> property) {
+        return students.stream()
+                .map(property)
+                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private Map<String, Integer> nameMap(Collection<Student> students) {

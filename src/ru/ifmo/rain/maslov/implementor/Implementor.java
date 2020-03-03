@@ -199,7 +199,7 @@ public class Implementor implements Impler {
     }
 
     private void implConstructor(Class<?> token, Writer writer) throws ImplerException {
-        Constructor<?>[] constructors = Arrays.stream(token.getConstructors())
+        Constructor<?>[] constructors = Arrays.stream(token.getDeclaredConstructors())
                 .filter(constructor -> !Modifier.isPrivate(constructor.getModifiers()))
                 .toArray(Constructor[]::new);
         if (constructors.length == 0) {

@@ -97,6 +97,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public boolean contains(Object o) {
         return Collections.binarySearch(elements, (T) Objects.requireNonNull(o), comp) >= 0;
     }
@@ -143,6 +144,7 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     @Override
+    @SuppressWarnings("unchecked")
     public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
 //        if (Collections.min(List.of(fromElement, toElement), comp) != fromElement)
 //            throw new IllegalArgumentException();
