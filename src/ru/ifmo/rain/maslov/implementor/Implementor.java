@@ -107,6 +107,7 @@ public class Implementor implements Impler {
         if (token.isPrimitive()
                 || token.isArray()
                 || token == Enum.class
+                || Modifier.isPrivate(token.getModifiers())
                 || Modifier.isFinal(token.getModifiers()))
             throw new ImplerException("Unimplementable class");
         root = root
@@ -150,7 +151,7 @@ public class Implementor implements Impler {
         ans.append("public class ")
                 .append(getClassName(token))
                 .append(token.isInterface() ? " implements " : " extends ")
-                .append(token.getSimpleName())
+                .append(token.getCanonicalName())
                 .append(" {")
                 .append(lineSeparator);
         write(writer, ans.toString());

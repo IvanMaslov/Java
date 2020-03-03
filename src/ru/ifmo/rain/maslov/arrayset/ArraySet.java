@@ -37,13 +37,16 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     }
 
     private void check() {
-        if (elements == null || elements.size() == 0)
+        if (elements == null || elements.size() == 0) {
             throw new NoSuchElementException();
+        }
     }
 
     private T getElem(int index) {
-        if (index < 0 || index >= size())
+        check();
+        if (index < 0 || index >= size()) {
             return null;
+        }
         return elements.get(index);
     }
 
@@ -146,8 +149,6 @@ public class ArraySet<T> extends AbstractSet<T> implements NavigableSet<T> {
     @Override
     @SuppressWarnings("unchecked")
     public ArraySet<T> subSet(T fromElement, boolean fromInclusive, T toElement, boolean toInclusive) {
-//        if (Collections.min(List.of(fromElement, toElement), comp) != fromElement)
-//            throw new IllegalArgumentException();
         if ((comp == null
                 && fromElement instanceof Comparable
                 && ((Comparable) fromElement).compareTo(toElement) > 0)

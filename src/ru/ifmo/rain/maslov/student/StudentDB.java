@@ -5,27 +5,31 @@ import info.kgeorgiy.java.advanced.student.Group;
 import info.kgeorgiy.java.advanced.student.Student;
 
 import java.util.*;
+import java.util.function.BinaryOperator;
 import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.*;
 
 public class StudentDB implements AdvancedStudentGroupQuery {
-    //TODO: inline
-    private final static Comparator<Student> nameComparator =
+    private final static Comparator<Student> STUDENT_COMPARATOR =
             Comparator.comparing(Student::getLastName)
-                    .thenComparing(Student::getFirstName);
-    private final static Comparator<Student> studentComparator =
-            nameComparator.thenComparing(Student::getId);
-    private final static Comparator<Group> groupComp =
+                    .thenComparing(Student::getFirstName)
+                    .thenComparing(Student::getId);
+
+    private final static Comparator<Group> GROUP_COMPARATOR =
             Comparator.comparing(Group::getName);
 
-    private static String studentFullName(Student x) {
-        return x.getFirstName() + " " + x.getLastName();
+    private static String getFullName(Student student) {
+        return student.getFirstName() + " " + student.getLastName();
+    }
+
+    private static Stream<String> getSomeStream(List<Student> students, Function<Student, String> getter) {
+        return students.stream()
+                .map(getter);
     }
 
     private static List<String> getSome(List<Student> students, Function<Student, String> getter) {
-        return students.stream()
-                .map(getter)
+        return getSomeStream(students, getter)
                 .collect(Collectors.toList());
     }
 
@@ -38,7 +42,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     private List<Student> findStudentsBy(Collection<Student> students, Predicate<Student> pred) {
         return students.stream()
                 .filter(pred)
-                .sorted(studentComparator)
+                .sorted(STUDENT_COMPARATOR)
                 .collect(Collectors.toList());
     }
 
@@ -59,12 +63,13 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<String> getFullNames(List<Student> students) {
-        return getSome(students, StudentDB::studentFullName);
+        return getSome(students, StudentDB::getFullName);
     }
 
     @Override
     public Set<String> getDistinctFirstNames(List<Student> students) {
-        return new TreeSet<>(getFirstNames(students));
+        return getSomeStream(students, Student::getFirstName)
+                .collect(Collectors.toSet());
     }
 
     @Override
@@ -82,22 +87,26 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<Student> sortStudentsByName(Collection<Student> students) {
-        return sortStudentsBy(students, studentComparator);
+        return sortStudentsBy(students, STUDENT_COMPARATOR);
+    }
+
+    private static Predicate<Student> checkProperty(Function<Student, String> property, String expectedValue) {
+        return (student -> property.apply(student).equals(expectedValue));
     }
 
     @Override
     public List<Student> findStudentsByFirstName(Collection<Student> students, String name) {
-        return findStudentsBy(students, x -> name.equals(x.getFirstName()));
+        return findStudentsBy(students, checkProperty(Student::getFirstName, name));
     }
 
     @Override
     public List<Student> findStudentsByLastName(Collection<Student> students, String name) {
-        return findStudentsBy(students, x -> name.equals(x.getLastName()));
+        return findStudentsBy(students, checkProperty(Student::getLastName, name));
     }
 
     @Override
     public List<Student> findStudentsByGroup(Collection<Student> students, String group) {
-        return findStudentsBy(students, x -> group.equals(x.getGroup()));
+        return findStudentsBy(students, checkProperty(Student::getGroup, group));
     }
 
     @Override
@@ -107,7 +116,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                 .collect(Collectors.toMap(
                         Student::getLastName,
                         Student::getFirstName,
-                        (a, b) -> a.compareTo(b) < 0 ? a : b
+                        BinaryOperator.minBy(Comparator.naturalOrder())
                 ));
     }
 
@@ -120,7 +129,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                 .entrySet()
                 .stream()
                 .map(x -> new Group(x.getKey(), x.getValue()))
-                .sorted(groupComp)
+                .sorted(GROUP_COMPARATOR)
                 .collect(Collectors.toList());
 
     }
@@ -134,7 +143,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<Group> getGroupsByName(Collection<Student> students) {
-        return getGroupBy(students, studentComparator);
+        return getGroupBy(students, STUDENT_COMPARATOR);
     }
 
     @Override
@@ -147,6 +156,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
         return getLargestGroupBy(students, Comparator.comparingInt(a -> a.getStudents().size()));
     }
 
+    // long comp
     @Override
     public String getLargestGroupFirstName(Collection<Student> students) {
         return getLargestGroupBy(students, Comparator.comparingLong(a ->
@@ -157,9 +167,10 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                         .count()));
     }
 
-    private List<String> getStudentById(List<String> students, int[] indices) {
+    private List<String> getStudentByIndices(List<String> students, int[] indices) {
         return Arrays.stream(indices)
-                .mapToObj(students::get)
+                .boxed()
+                .map(students::get)
                 .collect(Collectors.toList());
     }
 
@@ -171,7 +182,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     private Map<String, Integer> nameMap(Collection<Student> students) {
         return students.stream()
-                .collect(Collectors.groupingBy(StudentDB::studentFullName,
+                .collect(Collectors.groupingBy(StudentDB::getFullName,
                         Collectors.mapping(Student::getGroup,
                                 Collectors.collectingAndThen(Collectors.toSet(), Set::size))));
     }
@@ -179,9 +190,9 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     private String getPriorityStudent(Collection<Student> students, Map<String, Integer> priority) {
         return students.stream()
                 .max(Comparator.comparing(
-                        (Student x) -> priority.getOrDefault(studentFullName(x), -1))
-                        .thenComparing(StudentDB::studentFullName))
-                .map(StudentDB::studentFullName)
+                        (Student x) -> priority.getOrDefault(getFullName(x), -1))
+                        .thenComparing(StudentDB::getFullName))
+                .map(StudentDB::getFullName)
                 .orElse("");
     }
 
@@ -192,22 +203,23 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<String> getFirstNames(Collection<Student> students, int[] indices) {
-        return getStudentById(idMap(students, Student::getFirstName), indices);
+        return getStudentByIndices(idMap(students, Student::getFirstName), indices);
     }
 
     @Override
     public List<String> getLastNames(Collection<Student> students, int[] indices) {
-        return getStudentById(idMap(students, Student::getLastName), indices);
+        return getStudentByIndices(idMap(students, Student::getLastName), indices);
     }
 
     @Override
     public List<String> getGroups(Collection<Student> students, int[] indices) {
-        return getStudentById(idMap(students, Student::getGroup), indices);
+        return getStudentByIndices(idMap(students, Student::getGroup), indices);
     }
 
+    //fix not for all
     @Override
     public List<String> getFullNames(Collection<Student> students, int[] indices) {
-        return getStudentById(idMap(students, StudentDB::studentFullName), indices);
+        return getStudentByIndices(idMap(students, StudentDB::getFullName), indices);
     }
 }
 
