@@ -28,11 +28,26 @@ public class Implementor implements JarImpler {
 
     private static final String lineSeparator = System.lineSeparator();
 
+    /**
+     * Check both argument are not null
+     *
+     * @param token the given class token
+     * @param path the given path
+     * @throws ImplerException
+     *         if one of argument is null
+     */
     private void argumentChecker(Class<?> token, Path path) throws ImplerException {
         if (path == null || token == null)
             throw new ImplerException(new IllegalArgumentException("Null arguments"));
     }
 
+    /**
+     * creates all directories of path if them do not exists
+     *
+     * @param file the given path
+     * @throws ImplerException
+     *         if creation of directories failed
+     */
     private void createPath(Path file) throws ImplerException {
         Path parent = file.getParent();
         if (parent != null) {
@@ -44,12 +59,29 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * return path where the token implementation should be
+     *
+     * @param path the folder path
+     * @param token the given class token
+     * @param suffix suffix to resolved file in folder
+     * @return the result path
+     */
     private static Path getFilePath(Path path, Class<?> token, String suffix) {
         return path
                 .resolve(token.getPackageName().replace('.', File.separatorChar))
                 .resolve(getClassName(token) + suffix);
     }
 
+    /**
+     * makes jar file of class or interface witch implements token class
+     *
+     *
+     * @param token   type token to create implementation for.
+     * @param jarFile target <tt>.jar</tt> file.
+     * @throws ImplerException
+     *         in any exceptional situation during generation
+     */
     @Override
     public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
         argumentChecker(token, jarFile);
@@ -67,6 +99,8 @@ public class Implementor implements JarImpler {
             attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
             attributes.put(Attributes.Name.IMPLEMENTATION_VENDOR, "Ivan Maslov");
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            System.out.println(tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"));
+            System.out.println(getFilePath(tmpDirPath, token, ".java").toString());
             if (compiler == null || compiler.run(null, null, null, "-cp",
                     tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"),
                     getFilePath(tmpDirPath, token, ".java").toString()) != 0) {
@@ -304,4 +338,4 @@ public class Implementor implements JarImpler {
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor advanced ru.ifmo.rain.maslov.implementor.Implementor hello
+// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor jar-class ru.ifmo.rain.maslov.implementor.Implementor hello
