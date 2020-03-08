@@ -53,7 +53,6 @@ public class Implementor implements JarImpler {
     @Override
     public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
         argumentChecker(token, jarFile);
-        jarFile = getFilePath(jarFile, token, ".java");
         createPath(jarFile);
         Path tmpDirPath;
         try {
@@ -66,22 +65,19 @@ public class Implementor implements JarImpler {
             Manifest manifest = new Manifest();
             Attributes attributes = manifest.getMainAttributes();
             attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
-            //attributes.put(Attributes.Name.MAIN_CLASS, "info.kgeorgiy.java.advanced.Implementor");
             attributes.put(Attributes.Name.IMPLEMENTATION_VENDOR, "Ivan Maslov");
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
             if (compiler == null || compiler.run(null, null, null, "-cp",
                     tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"),
-                    String.valueOf(getFilePath(tmpDirPath, token, ".java")
-                    )) == 0) {
+                    getFilePath(tmpDirPath, token, ".java").toString()) != 0) {
                 throw new ImplerException("Cannot compile generated files");
             }
             try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarFile), manifest)) {
-                String classFile = token.getName().replace('.', '/') + "Impl.class";
-                jar.putNextEntry(new ZipEntry(classFile));
+                String className = token.getName().replace('.', '/') + "Impl.class";
+                jar.putNextEntry(new ZipEntry(className));
                 Files.copy(getFilePath(tmpDirPath, token, ".class"), jar);
             } catch (IOException e) {
-                e.printStackTrace();
-                throw new ImplerException("Cannot write to jar archive");
+                throw new ImplerException("Unable to write to JAR file", e);
             }
         } finally {
             try {
