@@ -1,6 +1,6 @@
 package ru.ifmo.rain.maslov.implementor;
 
-import info.kgeorgiy.java.advanced.implementor.Impler;
+import info.kgeorgiy.java.advanced.implementor.JarImpler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 
 import java.io.File;
@@ -11,6 +11,7 @@ import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
+import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -20,9 +21,34 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Implementor implements Impler {
+public class Implementor implements JarImpler {
 
     private static final String lineSeparator = System.lineSeparator();
+
+    private void argumentChecker(Class<?> token, Path path) throws ImplerException {
+        if (path == null || token == null)
+            throw new ImplerException(new IllegalArgumentException("Null arguments"));
+    }
+
+    private void createPath(Path file) throws ImplerException {
+        Path parent = file.getParent();
+        if (parent != null) {
+            try {
+                Files.createDirectories(parent);
+            } catch (IOException e) {
+                throw new ImplerException("Cannot create result file directories", e);
+            }
+        }
+    }
+
+    @Override
+    public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
+        argumentChecker(token, jarFile);
+        jarFile = jarFile
+                .resolve(token.getPackageName().replace('.', File.separatorChar))
+                .resolve(getClassName(token) + ".java");
+        createPath(jarFile);
+    }
 
     static class MethodWrap {
         private final Method method;
@@ -54,26 +80,38 @@ public class Implementor implements Impler {
         }
     }
 
-    public static void main(String[] argv) {
+    private static Class<?> getTokenToMain(String token) throws ImplerException {
         try {
-            if (argv == null) {
-                throw new ImplerException("Incorrect argument: argv is null");
+            return Class.forName(token);
+        } catch (ClassNotFoundException e) {
+            throw new ImplerException(e.getCause());
+        }
+    }
+
+    private static Path getPathToMain(String path) throws ImplerException {
+        try {
+            return Paths.get(path);
+        } catch (InvalidPathException e) {
+            throw new ImplerException(e.getCause());
+        }
+    }
+
+    public static void main(String[] argv) {
+        if (argv == null || argv.length < 2 || argv.length > 3) {
+            System.out.println("Incorrect arguments");
+            return;
+        }
+        try {
+            JarImpler impl = new Implementor();
+            if (argv.length == 2) {
+                impl.implement(getTokenToMain(argv[0]), getPathToMain(argv[1]));
             }
-            if (argv.length != 2) {
-                throw new ImplerException("Incorrect argument: argv length is not equal 2");
+            if (argv.length == 3) {
+                impl.implementJar(getTokenToMain(argv[1]), getPathToMain(argv[2]));
             }
-            if (argv[0] == null) {
-                throw new ImplerException("Incorrect argument: first argument is null");
-            }
-            if (argv[1] == null) {
-                throw new ImplerException("Incorrect argument: second argument is null");
-            }
-            Implementor t = new Implementor();
-            t.implement(Class.forName(argv[0]), Paths.get(argv[1]));
-        } catch (ImplerException | ClassNotFoundException e) {
+        } catch (ImplerException e) {
             e.printStackTrace();
         }
-
     }
 
     private String getClassName(Class<?> token) {
@@ -125,8 +163,7 @@ public class Implementor implements Impler {
 
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
-        if (root == null || token == null)
-            throw new ImplerException(new IllegalArgumentException("Null arguments"));
+        argumentChecker(token, root);
         if (token.isPrimitive()
                 || token.isArray()
                 || token == Enum.class
@@ -136,14 +173,7 @@ public class Implementor implements Impler {
         root = root
                 .resolve(token.getPackageName().replace('.', File.separatorChar))
                 .resolve(getClassName(token) + ".java");
-        Path parent = root.getParent();
-        if (parent != null) {
-            try {
-                Files.createDirectories(parent);
-            } catch (IOException e) {
-                throw new ImplerException("Cannot create result file directories", e);
-            }
-        }
+        createPath(root);
         try (Writer writer = Files.newBufferedWriter(root)) {
             implHead(token, writer);
             implMethods(token, writer);
