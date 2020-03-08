@@ -12,6 +12,7 @@ import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Objects;
@@ -53,6 +54,28 @@ public class Implementor implements Impler {
         }
     }
 
+    public static void main(String[] argv) {
+        try {
+            if (argv == null) {
+                throw new ImplerException("Incorrect argument: argv is null");
+            }
+            if (argv.length != 2) {
+                throw new ImplerException("Incorrect argument: argv length is not equal 2");
+            }
+            if (argv[0] == null) {
+                throw new ImplerException("Incorrect argument: first argument is null");
+            }
+            if (argv[1] == null) {
+                throw new ImplerException("Incorrect argument: second argument is null");
+            }
+            Implementor t = new Implementor();
+            t.implement(Class.forName(argv[0]), Paths.get(argv[1]));
+        } catch (ImplerException | ClassNotFoundException e) {
+            e.printStackTrace();
+        }
+
+    }
+
     private String getClassName(Class<?> token) {
         return token.getSimpleName() + "Impl";
     }
@@ -72,8 +95,8 @@ public class Implementor implements Impler {
         return Arrays.stream(exec.getParameters())
                 .map(parameter ->
                         (typed ? parameter.getType().getCanonicalName() + " " : "")
-                                + parameter.getName()
-                ).collect(Collectors.joining(", ", "(", ")"));
+                                + parameter.getName())
+                .collect(Collectors.joining(", ", "(", ")"));
     }
 
     private String getExceptions(Executable exec) {
@@ -159,7 +182,7 @@ public class Implementor implements Impler {
 
     private void implExecutable(Class<?> token, Writer writer, Executable exec) throws ImplerException {
         StringBuilder res = new StringBuilder(tabN(1));
-        final int mod = exec.getModifiers()
+        int mod = exec.getModifiers()
                 & ~Modifier.ABSTRACT
                 & ~Modifier.NATIVE
                 & ~Modifier.TRANSIENT;
@@ -212,4 +235,4 @@ public class Implementor implements Impler {
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor class ru.ifmo.rain.maslov.implementor.Implementor hello
+// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor advanced ru.ifmo.rain.maslov.implementor.Implementor hello
