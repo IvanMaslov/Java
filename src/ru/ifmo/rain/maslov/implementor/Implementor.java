@@ -3,6 +3,8 @@ package ru.ifmo.rain.maslov.implementor;
 import info.kgeorgiy.java.advanced.implementor.JarImpler;
 import info.kgeorgiy.java.advanced.implementor.ImplerException;
 
+import javax.tools.JavaCompiler;
+import javax.tools.ToolProvider;
 import java.io.File;
 import java.io.IOException;
 import java.io.Writer;
@@ -14,12 +16,13 @@ import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
+import java.util.jar.Attributes;
+import java.util.jar.JarOutputStream;
+import java.util.jar.Manifest;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import java.util.zip.ZipEntry;
 
 public class Implementor implements JarImpler {
 
@@ -41,13 +44,55 @@ public class Implementor implements JarImpler {
         }
     }
 
+    private static Path getFilePath(Path path, Class<?> token, String suffix) {
+        return path
+                .resolve(token.getPackageName().replace('.', File.separatorChar))
+                .resolve(getClassName(token) + suffix);
+    }
+
     @Override
     public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
         argumentChecker(token, jarFile);
-        jarFile = jarFile
-                .resolve(token.getPackageName().replace('.', File.separatorChar))
-                .resolve(getClassName(token) + ".java");
+        jarFile = getFilePath(jarFile, token, ".java");
         createPath(jarFile);
+        Path tmpDirPath;
+        try {
+            tmpDirPath = Files.createTempDirectory(jarFile.toAbsolutePath().getParent(), "tmp");
+        } catch (IOException e) {
+            throw new ImplerException("Cannot create temp directory");
+        }
+        try {
+            implement(token, tmpDirPath);
+            Manifest manifest = new Manifest();
+            Attributes attributes = manifest.getMainAttributes();
+            attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
+            //attributes.put(Attributes.Name.MAIN_CLASS, "info.kgeorgiy.java.advanced.Implementor");
+            attributes.put(Attributes.Name.IMPLEMENTATION_VENDOR, "Ivan Maslov");
+            JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
+            if (compiler == null || compiler.run(null, null, null, "-cp",
+                    tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"),
+                    String.valueOf(getFilePath(tmpDirPath, token, ".java")
+                    )) == 0) {
+                throw new ImplerException("Cannot compile generated files");
+            }
+            try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarFile), manifest)) {
+                String classFile = token.getName().replace('.', '/') + "Impl.class";
+                jar.putNextEntry(new ZipEntry(classFile));
+                Files.copy(getFilePath(tmpDirPath, token, ".class"), jar);
+            } catch (IOException e) {
+                e.printStackTrace();
+                throw new ImplerException("Cannot write to jar archive");
+            }
+        } finally {
+            try {
+                Files.walk(tmpDirPath)
+                        .sorted(Comparator.reverseOrder())
+                        .map(Path::toFile)
+                        .forEach(File::delete);
+            } catch (IOException e) {
+                throw new ImplerException("Cannot remove temp directory");
+            }
+        }
     }
 
     static class MethodWrap {
@@ -82,17 +127,17 @@ public class Implementor implements JarImpler {
 
     private static Class<?> getTokenToMain(String token) throws ImplerException {
         try {
-            return Class.forName(token);
-        } catch (ClassNotFoundException e) {
-            throw new ImplerException(e.getCause());
+            return Class.forName(Objects.requireNonNull(token));
+        } catch (ClassNotFoundException | NullPointerException e) {
+            throw new ImplerException(e);
         }
     }
 
     private static Path getPathToMain(String path) throws ImplerException {
         try {
-            return Paths.get(path);
-        } catch (InvalidPathException e) {
-            throw new ImplerException(e.getCause());
+            return Paths.get(Objects.requireNonNull(path));
+        } catch (InvalidPathException | NullPointerException e) {
+            throw new ImplerException(e);
         }
     }
 
@@ -114,7 +159,7 @@ public class Implementor implements JarImpler {
         }
     }
 
-    private String getClassName(Class<?> token) {
+    private static String getClassName(Class<?> token) {
         return token.getSimpleName() + "Impl";
     }
 
@@ -170,9 +215,7 @@ public class Implementor implements JarImpler {
                 || Modifier.isPrivate(token.getModifiers())
                 || Modifier.isFinal(token.getModifiers()))
             throw new ImplerException("Unimplementable class");
-        root = root
-                .resolve(token.getPackageName().replace('.', File.separatorChar))
-                .resolve(getClassName(token) + ".java");
+        root = getFilePath(root, token, ".java");
         createPath(root);
         try (Writer writer = Files.newBufferedWriter(root)) {
             implHead(token, writer);
