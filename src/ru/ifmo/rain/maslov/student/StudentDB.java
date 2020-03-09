@@ -156,15 +156,25 @@ public class StudentDB implements AdvancedStudentGroupQuery {
         return getLargestGroupBy(students, Comparator.comparingInt(a -> a.getStudents().size()));
     }
 
-    // long comp
+    private Comparator<Group> getLargestGroupFirstNameComparator(Map<String, Long> priority) {
+        return Comparator
+                .comparing((Group group) -> priority.getOrDefault(group.getName(), -1L))
+                .thenComparing(GROUP_COMPARATOR.reversed());
+    }
+
+    private Map<String, Long> getLargestGroupFirstNameMap(Collection<Student> students) {
+        return getGroupsByName(students).stream()
+                .collect(Collectors.toMap(Group::getName,
+                        group -> group.getStudents()
+                                .stream()
+                                .map(Student::getFirstName)
+                                .distinct()
+                                .count()));
+    }
+
     @Override
     public String getLargestGroupFirstName(Collection<Student> students) {
-        return getLargestGroupBy(students, Comparator.comparingLong(a ->
-                a.getStudents()
-                        .stream()
-                        .map(Student::getFirstName)
-                        .distinct()
-                        .count()));
+        return getLargestGroupBy(students, getLargestGroupFirstNameComparator(getLargestGroupFirstNameMap(students)));
     }
 
     private List<String> getStudentByIndices(List<String> students, int[] indices) {
@@ -172,12 +182,6 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                 .boxed()
                 .map(students::get)
                 .collect(Collectors.toList());
-    }
-
-    private List<String> idMap(Collection<Student> students, Function<Student, String> property) {
-        return students.stream()
-                .map(property)
-                .collect(Collectors.toCollection(ArrayList::new));
     }
 
     private Map<String, Integer> nameMap(Collection<Student> students) {
@@ -196,6 +200,13 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                 .orElse("");
     }
 
+    private List<String> getByIndices(Collection<Student> students, int[] indices, Function<Student, String> property) {
+        return getStudentByIndices(students.stream()
+                .map(property)
+                .limit(IntStream.of(indices).max().orElse(0) + 1)
+                .collect(Collectors.toCollection(ArrayList::new)), indices);
+    }
+
     @Override
     public String getMostPopularName(Collection<Student> students) {
         return getPriorityStudent(students, nameMap(students));
@@ -203,23 +214,22 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<String> getFirstNames(Collection<Student> students, int[] indices) {
-        return getStudentByIndices(idMap(students, Student::getFirstName), indices);
+        return getByIndices(students, indices, Student::getFirstName);
     }
 
     @Override
     public List<String> getLastNames(Collection<Student> students, int[] indices) {
-        return getStudentByIndices(idMap(students, Student::getLastName), indices);
+        return getByIndices(students, indices, Student::getLastName);
     }
 
     @Override
     public List<String> getGroups(Collection<Student> students, int[] indices) {
-        return getStudentByIndices(idMap(students, Student::getGroup), indices);
+        return getByIndices(students, indices, Student::getGroup);
     }
 
-    //fix not for all
     @Override
     public List<String> getFullNames(Collection<Student> students, int[] indices) {
-        return getStudentByIndices(idMap(students, StudentDB::getFullName), indices);
+        return getByIndices(students, indices, StudentDB::getFullName);
     }
 }
 
