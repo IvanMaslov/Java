@@ -423,7 +423,7 @@ public class Implementor implements JarImpler {
      * add all abstract boxed {@code methods} to {@code set}
      *
      * @param methods the given {@link Method[]}
-     * @param set the given {@link Set<MethodWrap>}
+     * @param set the given {@link Set}
      */
     private void getAbstractMethods(Method[] methods, Set<MethodWrap> set) {
         Arrays.stream(methods)
