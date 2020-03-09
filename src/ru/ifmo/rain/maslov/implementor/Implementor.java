@@ -32,9 +32,8 @@ public class Implementor implements JarImpler {
      * Check both argument are not null
      *
      * @param token the given class token
-     * @param path the given path
-     * @throws ImplerException
-     *         if one of argument is null
+     * @param path  the given path
+     * @throws ImplerException if one of argument is null
      */
     private void argumentChecker(Class<?> token, Path path) throws ImplerException {
         if (path == null || token == null)
@@ -45,8 +44,7 @@ public class Implementor implements JarImpler {
      * creates all directories of path if them do not exists
      *
      * @param file the given path
-     * @throws ImplerException
-     *         if creation of directories failed
+     * @throws ImplerException if creation of directories failed
      */
     private void createPath(Path file) throws ImplerException {
         Path parent = file.getParent();
@@ -62,8 +60,8 @@ public class Implementor implements JarImpler {
     /**
      * return path where the token implementation should be
      *
-     * @param path the folder path
-     * @param token the given class token
+     * @param path   the folder path
+     * @param token  the given class token
      * @param suffix suffix to resolved file in folder
      * @return the result path
      */
@@ -76,11 +74,9 @@ public class Implementor implements JarImpler {
     /**
      * makes jar file of class or interface witch implements token class
      *
-     *
      * @param token   type token to create implementation for.
      * @param jarFile target <tt>.jar</tt> file.
-     * @throws ImplerException
-     *         in any exceptional situation during generation
+     * @throws ImplerException in any exceptional situation during generation
      */
     @Override
     public void implementJar(Class<?> token, Path jarFile) throws ImplerException {
@@ -99,8 +95,8 @@ public class Implementor implements JarImpler {
             attributes.put(Attributes.Name.MANIFEST_VERSION, "1.0");
             attributes.put(Attributes.Name.IMPLEMENTATION_VENDOR, "Ivan Maslov");
             JavaCompiler compiler = ToolProvider.getSystemJavaCompiler();
-            System.out.println(tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"));
-            System.out.println(getFilePath(tmpDirPath, token, ".java").toString());
+            // System.out.println(tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"));
+            // System.out.println(getFilePath(tmpDirPath, token, ".java").toString());
             if (compiler == null || compiler.run(null, null, null, "-cp",
                     tmpDirPath.toString() + File.pathSeparator + System.getProperty("java.class.path"),
                     getFilePath(tmpDirPath, token, ".java").toString()) != 0) {
@@ -125,17 +121,35 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * class to wrap Method and push it to HashSet collection
+     */
     static class MethodWrap {
         private final Method method;
 
+        /**
+         * @param method the given method to wrap
+         */
         private MethodWrap(Method method) {
             this.method = method;
         }
 
+        /**
+         * @return the inner method
+         */
         Method getMethod() {
             return method;
         }
 
+        /**
+         * Indicates whether some other object is "equal to" this one.
+         *
+         * @param o the reference object with which to compare.
+         * @return {@code true} if this object is the same as the obj
+         * argument; {@code false} otherwise.
+         * @see #hashCode()
+         * @see java.util.HashMap
+         */
         @Override
         public boolean equals(Object o) {
             if (this == o) return true;
@@ -146,6 +160,15 @@ public class Implementor implements JarImpler {
                     && Arrays.equals(method.getParameterTypes(), that.method.getParameterTypes());
         }
 
+        /**
+         * Returns a hash code value for the object. This method is
+         * supported for the benefit of hash tables such as those provided by
+         * {@link java.util.HashMap}.
+         *
+         * @return a hash code value for this object.
+         * @see java.lang.Object#equals(java.lang.Object)
+         * @see java.lang.System#identityHashCode
+         */
         @Override
         public int hashCode() {
             return Objects.hash(
@@ -155,6 +178,13 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * return {@link Class} token by {@link String}
+     *
+     * @param token the given string
+     * @return the class token
+     * @throws ImplerException if there is no such class of the string or {@code token == null}
+     */
     private static Class<?> getTokenToMain(String token) throws ImplerException {
         try {
             return Class.forName(Objects.requireNonNull(token));
@@ -163,6 +193,13 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * return {@link Path} by {@link String}
+     *
+     * @param path the given string
+     * @return the path
+     * @throws ImplerException if the string is not valid path or {@code string == null}
+     */
     private static Path getPathToMain(String path) throws ImplerException {
         try {
             return Paths.get(Objects.requireNonNull(path));
@@ -171,6 +208,11 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * executable method of class
+     *
+     * @param argv the given arguments from console
+     */
     public static void main(String[] argv) {
         if (argv == null || argv.length < 2 || argv.length > 3) {
             System.out.println("Incorrect arguments");
@@ -189,14 +231,32 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * return {@link String} of new class name of {@link Class}
+     *
+     * @param token the given token
+     * @return new name of the token
+     */
     private static String getClassName(Class<?> token) {
         return token.getSimpleName() + "Impl";
     }
 
+    /**
+     * return {@code n} times {@literal \t}
+     *
+     * @param n the number
+     * @return {@link String} of n-times repeated {@literal \t}
+     */
     private String tabN(int n) {
         return Stream.generate(() -> "\t").limit(n).collect(Collectors.joining());
     }
 
+    /**
+     * return default value {@link String} by {@link Class} token
+     *
+     * @param token the given {@link Class}
+     * @return {@link String} of default value
+     */
     private String getDefaultValue(Class<?> token) {
         if (token.equals(void.class)) return "";
         if (token.equals(boolean.class)) return " false";
@@ -204,6 +264,15 @@ public class Implementor implements JarImpler {
         return " null";
     }
 
+    /**
+     * return {@link String} of given parameters of {@link Executable}
+     * if typed is {@code true} then adds class name before each parameter
+     * else only parameters
+     *
+     * @param exec  the {@link Executable} instance
+     * @param typed flag of adding class name before parameter
+     * @return {@link String} of parameters in brackets with delimiter {@literal ,}
+     */
     private String getParams(Executable exec, boolean typed) {
         return Arrays.stream(exec.getParameters())
                 .map(parameter ->
@@ -212,6 +281,12 @@ public class Implementor implements JarImpler {
                 .collect(Collectors.joining(", ", "(", ")"));
     }
 
+    /**
+     * return {@link String} of throwable classes of {@link Executable}
+     *
+     * @param exec the {@link Executable} instance
+     * @return {@link String} of execptions with delimiter {@literal}
+     */
     private String getExceptions(Executable exec) {
         Class<?>[] exceptions = exec.getExceptionTypes();
         if (exceptions.length == 0)
@@ -221,6 +296,13 @@ public class Implementor implements JarImpler {
                 .collect(Collectors.joining(", ", " throws ", ""));
     }
 
+    /**
+     * return {@link String} name of {@link Executable} instance
+     *
+     * @param token the given {@link Class}
+     * @param exec  the {@link Executable} instance
+     * @return the {@link String} of method name
+     */
     private String getMethodName(Class<?> token, Executable exec) {
         if (exec instanceof Method) {
             Method method = (Method) exec;
@@ -229,6 +311,12 @@ public class Implementor implements JarImpler {
         return getClassName(token);
     }
 
+    /**
+     * return {@link String} body code of {@link Executable} instance
+     *
+     * @param exec the {@link Executable} instance
+     * @return the {@link String} of method body
+     */
     private String getMethodBody(Executable exec) {
         if (exec instanceof Method) {
             return "return " + getDefaultValue(((Method) exec).getReturnType());
@@ -236,6 +324,13 @@ public class Implementor implements JarImpler {
         return "super" + getParams(exec, false);
     }
 
+    /**
+     * implements interface {@link info.kgeorgiy.java.advanced.implementor.Impler}
+     *
+     * @param token type token to create implementation for.
+     * @param root  root directory.
+     * @throws ImplerException in any exceptional situation
+     */
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
         argumentChecker(token, root);
@@ -258,6 +353,13 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * write data {@code str} to {@code writer}
+     *
+     * @param writer the given {@link Writer}
+     * @param str    the given {@link String}
+     * @throws ImplerException if has {@link IOException}
+     */
     private void write(Writer writer, String str) throws ImplerException {
         try {
             writer.write(str);
@@ -266,6 +368,13 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * implement head of the {@code token} to output stream {@code writer}
+     *
+     * @param token the given {@link Class}
+     * @param writer the given {@link Writer}
+     * @throws ImplerException throws by {@link Implementor#write(Writer, String)}
+     */
     private void implHead(Class<?> token, Writer writer) throws ImplerException {
         StringBuilder ans = new StringBuilder();
         if (!token.getPackageName().equals("")) {
@@ -283,13 +392,17 @@ public class Implementor implements JarImpler {
         write(writer, ans.toString());
     }
 
+    /**
+     * implements {@code executable} method of {@code token} to output stream {@code writer}
+     *
+     * @param token the given {@link Class}
+     * @param writer the given {@link Writer}
+     * @param exec the given {@link Executable}
+     * @throws ImplerException throws by {@link Implementor#write(Writer, String)}
+     */
     private void implExecutable(Class<?> token, Writer writer, Executable exec) throws ImplerException {
-        StringBuilder res = new StringBuilder(tabN(1));
-        int mod = exec.getModifiers()
-                & ~Modifier.ABSTRACT
-                & ~Modifier.NATIVE
-                & ~Modifier.TRANSIENT;
-        res.append(Modifier.toString(mod))
+        write(writer, (new StringBuilder(tabN(1)))
+                .append(Modifier.toString(exec.getModifiers() & ~(Modifier.ABSTRACT ^ Modifier.NATIVE ^ Modifier.TRANSIENT)))
                 .append(" ")
                 .append(getMethodName(token, exec))
                 .append(getParams(exec, true))
@@ -302,10 +415,16 @@ public class Implementor implements JarImpler {
                 .append(lineSeparator)
                 .append(tabN(1))
                 .append("}")
-                .append(lineSeparator);
-        write(writer, res.toString());
+                .append(lineSeparator)
+                .toString());
     }
 
+    /**
+     * add all abstract boxed {@code methods} to {@code set}
+     *
+     * @param methods the given {@link Method[]}
+     * @param set the given {@link Set<MethodWrap>}
+     */
     private void getAbstractMethods(Method[] methods, Set<MethodWrap> set) {
         Arrays.stream(methods)
                 .filter(method -> Modifier.isAbstract(method.getModifiers()))
@@ -313,6 +432,13 @@ public class Implementor implements JarImpler {
                 .collect(Collectors.toCollection(() -> set));
     }
 
+    /**
+     * implement all methods of {@code token} to output stream {@code writer}
+     *
+     * @param token the given {@link Class}
+     * @param writer the given {@link Writer}
+     * @throws ImplerException throws {@link Implementor#write(Writer, String)}
+     */
     private void implMethods(Class<?> token, Writer writer) throws ImplerException {
         Set<MethodWrap> methods = new HashSet<>();
         getAbstractMethods(token.getMethods(), methods);
@@ -325,6 +451,13 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * implement all constructors of {@code token} to output stream {@code writer}
+     *
+     * @param token the given {@link Class}
+     * @param writer the given {@link Writer}
+     * @throws ImplerException throws {@link Implementor#write(Writer, String)}
+     */
     private void implConstructor(Class<?> token, Writer writer) throws ImplerException {
         Constructor<?>[] constructors = Arrays.stream(token.getDeclaredConstructors())
                 .filter(constructor -> !Modifier.isPrivate(constructor.getModifiers()))
