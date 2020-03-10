@@ -28,7 +28,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
                 .map(getter);
     }
 
-    private static List<String> getSome(List<Student> students, Function<Student, String> getter) {
+    private static List<String> getSomeList(List<Student> students, Function<Student, String> getter) {
         return getSomeStream(students, getter)
                 .collect(Collectors.toList());
     }
@@ -48,22 +48,22 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<String> getFirstNames(List<Student> students) {
-        return getSome(students, Student::getFirstName);
+        return getSomeList(students, Student::getFirstName);
     }
 
     @Override
     public List<String> getLastNames(List<Student> students) {
-        return getSome(students, Student::getLastName);
+        return getSomeList(students, Student::getLastName);
     }
 
     @Override
     public List<String> getGroups(List<Student> students) {
-        return getSome(students, Student::getGroup);
+        return getSomeList(students, Student::getGroup);
     }
 
     @Override
     public List<String> getFullNames(List<Student> students) {
-        return getSome(students, StudentDB::getFullName);
+        return getSomeList(students, StudentDB::getFullName);
     }
 
     @Override
@@ -82,7 +82,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     @Override
     public List<Student> sortStudentsById(Collection<Student> students) {
-        return sortStudentsBy(students, Comparator.comparing(Student::getId));
+        return sortStudentsBy(students, Comparator.comparingInt(Student::getId));
     }
 
     @Override
@@ -91,7 +91,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     }
 
     private static Predicate<Student> checkProperty(Function<Student, String> property, String expectedValue) {
-        return (student -> property.apply(student).equals(expectedValue));
+        return student -> property.apply(student).equals(expectedValue);
     }
 
     @Override
@@ -112,7 +112,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     @Override
     public Map<String, String> findStudentNamesByGroup(Collection<Student> students, String group) {
         return students.stream()
-                .filter(x -> group.equals(x.getGroup()))
+                .filter(checkProperty(Student::getGroup, group))
                 .collect(Collectors.toMap(
                         Student::getLastName,
                         Student::getFirstName,
@@ -158,7 +158,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     private Comparator<Group> getLargestGroupFirstNameComparator(Map<String, Long> priority) {
         return Comparator
-                .comparing((Group group) -> priority.getOrDefault(group.getName(), -1L))
+                .comparingLong((Group group) -> priority.getOrDefault(group.getName(), -1L))
                 .thenComparing(GROUP_COMPARATOR.reversed());
     }
 
@@ -179,8 +179,7 @@ public class StudentDB implements AdvancedStudentGroupQuery {
 
     private List<String> getStudentByIndices(List<String> students, int[] indices) {
         return Arrays.stream(indices)
-                .boxed()
-                .map(students::get)
+                .mapToObj(students::get)
                 .collect(Collectors.toList());
     }
 
@@ -233,4 +232,4 @@ public class StudentDB implements AdvancedStudentGroupQuery {
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.student AdvancedStudentGroupQuery  ru.ifmo.rain.maslov.student.StudentDB hello
+// java -cp . -p . -m info.kgeorgiy.java.advanced.student AdvancedStudentGroupQuery ru.ifmo.rain.maslov.student.StudentDB hello

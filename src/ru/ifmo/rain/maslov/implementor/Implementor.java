@@ -33,7 +33,7 @@ public class Implementor implements JarImpler {
      *
      * @param token the given class token
      * @param path  the given path
-     * @throws ImplerException if one of argument is null
+     * @throws ImplerException if one of argument is {@code null}
      */
     private void argumentChecker(Class<?> token, Path path) throws ImplerException {
         if (path == null || token == null)
@@ -41,7 +41,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * creates all directories of path if them do not exists
+     * Creates all directories of {@code path} if them do not exists
      *
      * @param file the given path
      * @throws ImplerException if creation of directories failed
@@ -58,7 +58,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return path where the token implementation should be
+     * Path where the token implementation should be
      *
      * @param path   the folder path
      * @param token  the given class token
@@ -72,7 +72,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * makes jar file of class or interface witch implements token class
+     * Makes jar file of class or interface witch implements token class
      *
      * @param token   type token to create implementation for.
      * @param jarFile target <tt>.jar</tt> file.
@@ -122,20 +122,20 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * class to wrap Method and push it to HashSet collection
+     * Class to wrap {@link Method} and push it to {@link HashSet} {@link Collection}
      */
     static class MethodWrap {
         private final Method method;
 
         /**
-         * @param method the given method to wrap
+         * @param method the given {@link Method} to wrap
          */
         private MethodWrap(Method method) {
             this.method = method;
         }
 
         /**
-         * @return the inner method
+         * @return the inner {@code method}
          */
         Method getMethod() {
             return method;
@@ -179,7 +179,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@link Class} token by {@link String}
+     * Get {@link Class} token by {@link String}
      *
      * @param token the given string
      * @return the class token
@@ -209,7 +209,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * executable method of class
+     * Executable method of class {@link Implementor}
      *
      * @param argv the given arguments from console
      */
@@ -232,7 +232,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@link String} of new class name of {@link Class}
+     * Get {@link String} of new class name of {@link Class}
      *
      * @param token the given token
      * @return new name of the token
@@ -242,7 +242,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@code n} times {@literal \t}
+     * Get {@code n} times {@literal \t}
      *
      * @param n the number
      * @return {@link String} of n-times repeated {@literal \t}
@@ -252,9 +252,9 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return default value {@link String} by {@link Class} token
+     * Get default {@link String} value by {@link Class} token
      *
-     * @param token the given {@link Class}
+     * @param token the given {@link Class} token
      * @return {@link String} of default value
      */
     private String getDefaultValue(Class<?> token) {
@@ -265,9 +265,11 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@link String} of given parameters of {@link Executable}
+     * Get {@link String} of given parameters of {@link Executable}
+     * <p>
      * if typed is {@code true} then adds class name before each parameter
      * else only parameters
+     * </p>
      *
      * @param exec  the {@link Executable} instance
      * @param typed flag of adding class name before parameter
@@ -282,7 +284,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@link String} of throwable classes of {@link Executable}
+     * Get {@link String} of throwable classes of {@link Executable}
      *
      * @param exec the {@link Executable} instance
      * @return {@link String} of execptions with delimiter {@literal}
@@ -297,7 +299,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@link String} name of {@link Executable} instance
+     * Get {@link String} name of {@link Executable} instance
      *
      * @param token the given {@link Class}
      * @param exec  the {@link Executable} instance
@@ -312,7 +314,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * return {@link String} body code of {@link Executable} instance
+     * Get {@link String} body code of {@link Executable} instance
      *
      * @param exec the {@link Executable} instance
      * @return the {@link String} of method body
@@ -325,11 +327,23 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * implements interface {@link info.kgeorgiy.java.advanced.implementor.Impler}
+     * Implements interface {@link info.kgeorgiy.java.advanced.implementor.Impler} to {@code root} directory
      *
-     * @param token type token to create implementation for.
-     * @param root  root directory.
-     * @throws ImplerException in any exceptional situation
+     * @param token {@link Class} token to create implementation for.
+     * @param root  {@link Path} root of directory.
+     * @throws ImplerException in any exceptional situation:
+     * <ul>
+     *  <li> if token is primitive </li>
+     *  <li> if token is array</li>
+     *  <li> if token is {@link Enum}</li>
+     *  <li> if token is private</li>
+     *  <li> if token is protected</li>
+     *  <li> if happened {@link ImplerException} in methods:<ul>
+     *      <li>{@link Implementor#implMethods(Class, Writer)}</li>
+     *      <li>{@link Implementor#implHead(Class, Writer)}</li>
+     *      <li>{@link Implementor#implConstructor(Class, Writer)}</li>
+     *  </ul> </li>
+     * </ul>
      */
     @Override
     public void implement(Class<?> token, Path root) throws ImplerException {
@@ -354,7 +368,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * write data {@code str} converted to unicode to {@code writer}
+     * Push data {@code str} converted to {@literal Unicode} to {@link Writer} {@code writer}
      *
      * @param writer the given {@link Writer}
      * @param str    the given {@link String}
@@ -376,7 +390,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * implement head of the {@code token} to output stream {@code writer}
+     * Implement head of the {@code token} to {@link Writer} {@code writer}
      *
      * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
@@ -400,7 +414,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * implements {@code executable} method of {@code token} to output stream {@code writer}
+     * Implement {@code executable} method of {@code token} to {@link Writer} {@code writer}
      *
      * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
@@ -427,7 +441,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * add all boxed {@code methods} to {@code set}
+     * Add all boxed {@code methods} to {@code set}
      *
      * @param methods the given {@link Method[]}
      * @param set     the given {@link Set}
@@ -437,7 +451,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * implement all methods of {@code token} to output stream {@code writer}
+     * Implement all methods of {@code token} to {@link Writer} {@code writer}
      *
      * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
@@ -459,11 +473,12 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * implement all constructors of {@code token} to output stream {@code writer}
+     * Implement all constructors of {@code token} to {@link Writer} {@code writer}
      *
      * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
      * @throws ImplerException throws {@link Implementor#write(Writer, String)}
+     *                         or in case if zero non-private constructors
      */
     private void implConstructor(Class<?> token, Writer writer) throws ImplerException {
         Constructor<?>[] constructors = Arrays.stream(token.getDeclaredConstructors())

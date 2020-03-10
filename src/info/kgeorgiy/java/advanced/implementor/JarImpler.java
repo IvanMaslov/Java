@@ -7,13 +7,13 @@ import java.nio.file.Path;
  */
 public interface JarImpler extends Impler {
     /**
-     * Produces <tt>.jar</tt> file implementing class or interface specified by provided <tt>token</tt>.
+     * Produces <var>.jar</var> file implementing class or interface specified by provided <var>token</var>.
      * <p>
-     * Generated class classes name should be same as classes name of the type token with <tt>Impl</tt> suffix
+     * Generated class classes name should be same as classes name of the type token with <var>Impl</var> suffix
      * added.
      *
      * @param token type token to create implementation for.
-     * @param jarFile target <tt>.jar</tt> file.
+     * @param jarFile target <var>.jar</var> file.
      * @throws ImplerException when implementation cannot be generated.
      */
     void implementJar(Class<?> token, Path jarFile) throws ImplerException;
