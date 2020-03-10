@@ -354,7 +354,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * write data {@code str} to {@code writer}
+     * write data {@code str} converted to unicode to {@code writer}
      *
      * @param writer the given {@link Writer}
      * @param str    the given {@link String}
@@ -362,7 +362,14 @@ public class Implementor implements JarImpler {
      */
     private void write(Writer writer, String str) throws ImplerException {
         try {
-            writer.write(str);
+            StringBuilder unicodeStr = new StringBuilder();
+            for (char c : str.toCharArray()) {
+                if (c >= 128)
+                    unicodeStr.append("\\u").append(String.format("%04X", (int) c));
+                else
+                    unicodeStr.append(c);
+            }
+            writer.write(unicodeStr.toString());
         } catch (IOException e) {
             throw new ImplerException("Write output file fail", e);
         }
@@ -371,7 +378,7 @@ public class Implementor implements JarImpler {
     /**
      * implement head of the {@code token} to output stream {@code writer}
      *
-     * @param token the given {@link Class}
+     * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
      * @throws ImplerException throws by {@link Implementor#write(Writer, String)}
      */
@@ -395,9 +402,9 @@ public class Implementor implements JarImpler {
     /**
      * implements {@code executable} method of {@code token} to output stream {@code writer}
      *
-     * @param token the given {@link Class}
+     * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
-     * @param exec the given {@link Executable}
+     * @param exec   the given {@link Executable}
      * @throws ImplerException throws by {@link Implementor#write(Writer, String)}
      */
     private void implExecutable(Class<?> token, Writer writer, Executable exec) throws ImplerException {
@@ -420,32 +427,32 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * add all abstract boxed {@code methods} to {@code set}
+     * add all boxed {@code methods} to {@code set}
      *
      * @param methods the given {@link Method[]}
-     * @param set the given {@link Set}
+     * @param set     the given {@link Set}
      */
-    private void getAbstractMethods(Method[] methods, Set<MethodWrap> set) {
-        Arrays.stream(methods)
-                .filter(method -> Modifier.isAbstract(method.getModifiers()))
-                .map(MethodWrap::new)
-                .collect(Collectors.toCollection(() -> set));
+    private void addMethodsToSet(Method[] methods, Set<MethodWrap> set) {
+        Arrays.stream(methods).map(MethodWrap::new).collect(Collectors.toCollection(() -> set));
     }
 
     /**
      * implement all methods of {@code token} to output stream {@code writer}
      *
-     * @param token the given {@link Class}
+     * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
      * @throws ImplerException throws {@link Implementor#write(Writer, String)}
      */
     private void implMethods(Class<?> token, Writer writer) throws ImplerException {
         Set<MethodWrap> methods = new HashSet<>();
-        getAbstractMethods(token.getMethods(), methods);
+        addMethodsToSet(token.getMethods(), methods);
         while (token != null) {
-            getAbstractMethods(token.getDeclaredMethods(), methods);
+            addMethodsToSet(token.getDeclaredMethods(), methods);
             token = token.getSuperclass();
         }
+        methods = methods.stream()
+                .filter(x -> Modifier.isAbstract(x.getMethod().getModifiers()))
+                .collect(Collectors.toSet());
         for (MethodWrap exec : methods) {
             implExecutable(null, writer, exec.getMethod());
         }
@@ -454,7 +461,7 @@ public class Implementor implements JarImpler {
     /**
      * implement all constructors of {@code token} to output stream {@code writer}
      *
-     * @param token the given {@link Class}
+     * @param token  the given {@link Class}
      * @param writer the given {@link Writer}
      * @throws ImplerException throws {@link Implementor#write(Writer, String)}
      */
