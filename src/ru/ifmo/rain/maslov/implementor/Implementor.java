@@ -12,10 +12,8 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.Executable;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.nio.file.Files;
-import java.nio.file.InvalidPathException;
-import java.nio.file.Path;
-import java.nio.file.Paths;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -26,6 +24,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
+/**
+ * @author Ivan Maslov
+ */
 public class Implementor implements JarImpler {
 
     private static final String lineSeparator = System.lineSeparator();
@@ -103,7 +104,8 @@ public class Implementor implements JarImpler {
                 throw new ImplerException("Cannot compile generated files");
             }
             try (JarOutputStream jar = new JarOutputStream(Files.newOutputStream(jarFile), manifest)) {
-                String className = token.getName().replace('.', '/') + "Impl.class";
+                String className = token.getPackageName().replace('.', '/') + '/'
+                        + getClassName(token) + ".class";
                 jar.putNextEntry(new ZipEntry(className));
                 Files.copy(getFilePath(tmpDirPath, token, ".class"), jar);
             } catch (IOException e) {
@@ -111,10 +113,7 @@ public class Implementor implements JarImpler {
             }
         } finally {
             try {
-                Files.walk(tmpDirPath)
-                        .sorted(Comparator.reverseOrder())
-                        .map(Path::toFile)
-                        .forEach(File::delete);
+                Files.walkFileTree(tmpDirPath, new DirectoryCleaner());
             } catch (IOException e) {
                 throw new ImplerException("Cannot remove temp directory");
             }
@@ -122,7 +121,7 @@ public class Implementor implements JarImpler {
     }
 
     /**
-     * Class to wrap {@link Method} and push it to {@link HashSet} {@link Collection}
+     * Class to wrap {@link java.lang.reflect.Method} and push it to {@link java.util.HashSet} {@link java.util.Collection}
      */
     static class MethodWrap {
         private final Method method;
@@ -175,6 +174,20 @@ public class Implementor implements JarImpler {
                     method.getName().hashCode(),
                     method.getReturnType().hashCode(),
                     Arrays.hashCode(method.getParameterTypes()));
+        }
+    }
+
+    static class DirectoryCleaner extends SimpleFileVisitor<Path> {
+        @Override
+        public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
+            Files.delete(file);
+            return FileVisitResult.CONTINUE;
+        }
+
+        @Override
+        public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
+            Files.delete(dir);
+            return FileVisitResult.CONTINUE;
         }
     }
 
@@ -419,6 +432,8 @@ public class Implementor implements JarImpler {
         String ans = "";
         if (!token.getPackageName().equals("")) {
             ans = "package " + token.getPackageName() + ";" + lineSeparator;
+        } else {
+            ans = "package " + token.getName() + "pack ;" + lineSeparator;
         }
         ans += "public class " + getClassName(token) + (token.isInterface() ? " implements " : " extends ")
                 + token.getCanonicalName() + " {" + lineSeparator;
@@ -428,9 +443,11 @@ public class Implementor implements JarImpler {
     /**
      * Implement {@code executable} method of {@code token} to {@link Writer} {@code writer}
      *
-     * @param token  the given {@link Class}
-     * @param writer the given {@link Writer}
-     * @param exec   the given {@link Executable}
+     * @param token             the given {@link Class}
+     * @param writer            the given {@link Writer}
+     * @param exec              the given {@link Executable}
+     * @param getExecutableName the given {@link BiFunction} to generate name from {@code token} and {@code exec}
+     * @param getExecutableBody the given {@link Function} to generate body from {@code exec}
      * @throws ImplerException throws by {@link Implementor#write(Writer, String)}
      */
     private void implExecutable(Class<?> token, Writer writer, Executable exec,
@@ -442,15 +459,9 @@ public class Implementor implements JarImpler {
                 getExecutableName.apply(token, exec) +
                 getParams(exec, true) +
                 getExceptions(exec) +
-                "{" +
-                lineSeparator +
-                tabN(2) +
+                "{" + lineSeparator + tabN(2) +
                 getExecutableBody.apply(exec) +
-                ";" +
-                lineSeparator +
-                tabN(1) +
-                "}" +
-                lineSeparator);
+                ";" + lineSeparator + tabN(1) + "}" + lineSeparator);
     }
 
     /**
@@ -506,4 +517,4 @@ public class Implementor implements JarImpler {
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor jar-class ru.ifmo.rain.maslov.implementor.Implementor hello
+// java -cp . -p . -m info.kgeorgiy.java.advanced.implementor jar-advanced ru.ifmo.rain.maslov.implementor.Implementor hello
