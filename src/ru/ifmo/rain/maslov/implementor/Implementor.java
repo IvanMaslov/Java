@@ -32,6 +32,13 @@ public class Implementor implements JarImpler {
     private static final String lineSeparator = System.lineSeparator();
 
     /**
+     * {@link Implementor} constructor
+     */
+    public Implementor() {
+        super();
+    }
+
+    /**
      * Check both argument are not null
      *
      * @param token the given class token
@@ -40,7 +47,8 @@ public class Implementor implements JarImpler {
      */
     private void argumentChecker(Class<?> token, Path path) throws ImplerException {
         if (path == null || token == null)
-            throw new ImplerException(new IllegalArgumentException("Null arguments"));
+            throw new NullPointerException("path or token was null");
+        //throw new ImplerException(new IllegalArgumentException("Null arguments"));
     }
 
     /**
@@ -127,6 +135,8 @@ public class Implementor implements JarImpler {
         private final Method method;
 
         /**
+         * {@link MethodWrap} constructor
+         *
          * @param method the given {@link Method} to wrap
          */
         private MethodWrap(Method method) {
@@ -177,13 +187,40 @@ public class Implementor implements JarImpler {
         }
     }
 
+    /**
+     * class to clean temporary directory
+     */
     static class DirectoryCleaner extends SimpleFileVisitor<Path> {
+
+        /**
+         * {@link DirectoryCleaner} constructor
+         */
+        public DirectoryCleaner() {
+            super();
+        }
+
+        /**
+         * delete file in directory
+         *
+         * @param file {@link Path} of file
+         * @param attr {@link BasicFileAttributes} of file
+         * @return {@code FileVisitResult.CONTINUE}
+         * @throws IOException in fail of deleting
+         */
         @Override
         public FileVisitResult visitFile(Path file, BasicFileAttributes attr) throws IOException {
             Files.delete(file);
             return FileVisitResult.CONTINUE;
         }
 
+        /**
+         * delete directory
+         *
+         * @param dir {@link Path} of file
+         * @param exc {@link IOException} of previous walk if it happened
+         * @return {@code FileVisitResult.CONTINUE}
+         * @throws IOException in fail of deleting
+         */
         @Override
         public FileVisitResult postVisitDirectory(Path dir, IOException exc) throws IOException {
             Files.delete(dir);

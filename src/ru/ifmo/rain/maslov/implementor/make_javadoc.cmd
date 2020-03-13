@@ -1,5 +1,5 @@
 SET javadoc_path=D:\paradigm19\paradigm20\implerdoc
-SET doc_link=https://docs.oracle.com/javase/8/docs/api
+SET doc_link=https://docs.oracle.com/en/java/javase/13/docs/api
 SET impl=D:\paradigm19\paradigm20\src\info\kgeorgiy\java\advanced\implementor\
 SET package=D:\paradigm19\paradigm20\src\
 SET libs=D:\paradigm19\paradigm20\src\
