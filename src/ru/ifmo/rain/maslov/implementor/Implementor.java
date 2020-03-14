@@ -25,6 +25,7 @@ import java.util.stream.Stream;
 import java.util.zip.ZipEntry;
 
 /**
+ * class to implement {@link JarImpler}
  * @author Ivan Maslov
  */
 public class Implementor implements JarImpler {
