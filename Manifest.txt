@@ -1,2 +1,2 @@
-Main-Class: Implementor
+Main-Class: ru.ifmo.rain.maslov.implementor.Implementor
 Implementation-Vendor: Ivan Maslov

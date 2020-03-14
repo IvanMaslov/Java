@@ -25,11 +25,11 @@ public class Parallelism implements ListIP {
         threads = Math.min(threads, values.size());
         final List<Thread> jobs = new ArrayList<>(Collections.nCopies(threads, null));
         final List<R> result = new ArrayList<>(Collections.nCopies(threads, null));
-        final int block = values.size() / threads;
         final int rest = values.size() % threads;
-        jobs.set(0, threadGenerator(0, result, values.subList(0, rest).stream(), task));
-        jobs.get(0).start();
-        for (int i = 1, pos = rest; i < threads; ++i, pos += block) {
+        int block = 1 + values.size() / threads;
+        for (int i = 0, pos = 0; i < threads; ++i, pos += block) {
+            if (rest == i)
+                block -= 1;
             jobs.set(i, threadGenerator(i, result, values.subList(pos, pos + block).stream(), task));
             jobs.get(i).start();
         }
