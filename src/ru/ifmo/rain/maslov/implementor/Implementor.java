@@ -26,6 +26,7 @@ import java.util.zip.ZipEntry;
 
 /**
  * class to implement {@link JarImpler}
+ *
  * @author Ivan Maslov
  */
 public class Implementor implements JarImpler {
@@ -467,12 +468,11 @@ public class Implementor implements JarImpler {
      * @throws ImplerException throws by {@link Implementor#write(Writer, String)}
      */
     private void implHead(Class<?> token, Writer writer) throws ImplerException {
-        String ans = "";
-        if (!token.getPackageName().equals("")) {
-            ans = "package " + token.getPackageName() + ";" + lineSeparator;
-        } else {
-            ans = "package " + token.getName() + "pack ;" + lineSeparator;
-        }
+        String ans = "package " +
+                (token.getPackageName().isEmpty()
+                        ? token.getSimpleName() + "base;"
+                        : token.getPackageName())
+                + ";" + lineSeparator;
         ans += "public class " + getClassName(token) + (token.isInterface() ? " implements " : " extends ")
                 + token.getCanonicalName() + " {" + lineSeparator;
         write(writer, ans);
