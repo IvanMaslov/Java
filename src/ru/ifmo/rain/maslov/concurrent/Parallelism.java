@@ -39,6 +39,14 @@ public class Parallelism implements ListIP {
         return collector.apply(result.stream());
     }
 
+    /**
+     * Join values to string.
+     *
+     * @param threads number of concurrent threads.
+     * @param values  values to join.
+     * @return list of joined result of {@link #toString()} call on each value.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
     @Override
     public String join(int threads, List<?> values) throws InterruptedException {
         return doJob(threads, values,
@@ -46,6 +54,15 @@ public class Parallelism implements ListIP {
                 stream -> stream.collect(Collectors.joining()));
     }
 
+    /**
+     * Filters values by predicate.
+     *
+     * @param threads   number of concurrent threads.
+     * @param values    values to filter.
+     * @param predicate filter predicate.
+     * @return list of values satisfying given predicated. Order of values is preserved.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
     @Override
     public <T> List<T> filter(int threads, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
         return doJob(threads, values,
@@ -53,6 +70,15 @@ public class Parallelism implements ListIP {
                 stream -> stream.flatMap(Collection::stream).collect(Collectors.toList()));
     }
 
+    /**
+     * Maps values.
+     *
+     * @param threads number of concurrent threads.
+     * @param values  values to filter.
+     * @param f       mapper function.
+     * @return list of values mapped by given function.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
     @Override
     public <T, U> List<U> map(int threads, List<? extends T> values, Function<? super T, ? extends U> f) throws InterruptedException {
         return doJob(threads, values,
@@ -60,11 +86,33 @@ public class Parallelism implements ListIP {
                 stream -> stream.flatMap(Collection::stream).collect(Collectors.toList()));
     }
 
+    /**
+     * Returns maximum value.
+     *
+     * @param threads    number or concurrent threads.
+     * @param values     values to get maximum of.
+     * @param comparator value comparator.
+     * @param <T>        value type.
+     * @return maximum of given values
+     * @throws InterruptedException             if executing thread was interrupted.
+     * @throws java.util.NoSuchElementException if not values are given.
+     */
     @Override
     public <T> T maximum(int threads, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
         return minimum(threads, values, Collections.reverseOrder(comparator));
     }
 
+    /**
+     * Returns minimum value.
+     *
+     * @param threads    number or concurrent threads.
+     * @param values     values to get minimum of.
+     * @param comparator value comparator.
+     * @param <T>        value type.
+     * @return minimum of given values
+     * @throws InterruptedException             if executing thread was interrupted.
+     * @throws java.util.NoSuchElementException if not values are given.
+     */
     @Override
     public <T> T minimum(int threads, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
         if (values == null || values.isEmpty())
@@ -73,11 +121,31 @@ public class Parallelism implements ListIP {
         return doJob(threads, values, streamMax, streamMax);
     }
 
+    /**
+     * Returns whether all values satisfies predicate.
+     *
+     * @param threads   number or concurrent threads.
+     * @param values    values to test.
+     * @param predicate test predicate.
+     * @param <T>       value type.
+     * @return whether all values satisfies predicate or {@code true}, if no values are given.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
     @Override
     public <T> boolean all(int threads, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
         return !any(threads, values, predicate.negate());
     }
 
+    /**
+     * Returns whether any of values satisfies predicate.
+     *
+     * @param threads   number or concurrent threads.
+     * @param values    values to test.
+     * @param predicate test predicate.
+     * @param <T>       value type.
+     * @return whether any value satisfies predicate or {@code false}, if no values are given.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
     @Override
     public <T> boolean any(int threads, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
         return doJob(threads, values,

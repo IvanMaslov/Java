@@ -14,6 +14,8 @@ javac -d %res% -cp %libs%; %real%Implementor.java %impl%\*.java
 
 cd %res%
 
+java -cp . -p . -m info.kgeorgiy.java.advanced.implementor advanced ru.ifmo.rain.maslov.implementor.Implementor %salt%
+
 jar xf %res%/%%Impler.class %res%/ImplerException.class %res%/JarImpler.class
 jar cmf Implementor.jar %package%\ru\ifmo\rain\maslov\implementor\Manifest.txt
 
