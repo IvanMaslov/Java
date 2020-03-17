@@ -1,6 +1,6 @@
 package ru.ifmo.rain.maslov.concurrent;
 
-import info.kgeorgiy.java.advanced.concurrent.ListIP;
+import info.kgeorgiy.java.advanced.concurrent.AdvancedIP;
 
 import java.util.*;
 import java.util.function.Function;
@@ -8,16 +8,16 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Parallelism implements ListIP {
+public class Parallelism implements AdvancedIP {
 
-    private static <A, R> Thread threadGenerator(int i, List<R> res, Stream<? extends A> data,
-                                                 Function<? super Stream<? extends A>, ? extends R> task) {
+    private static <A, R> Thread threadGenerator(int i, List<R> res, Stream<A> data,
+                                                 Function<? super Stream<A>, R> task) {
         return new Thread(() -> res.set(i, task.apply(data)));
     }
 
-    private <A, R> R doJob(int threads, List<? extends A> values,
-                           Function<? super Stream<? extends A>, ? extends R> task,
-                           Function<? super Stream<? extends R>, ? extends R> collector)
+    private <A, R> R doJob(int threads, List<A> values,
+                           Function<? super Stream<A>, R> task,
+                           Function<? super Stream<R>, R> collector)
             throws InterruptedException {
         if (threads <= 0) {
             throw new IllegalArgumentException("thread number was negative");
@@ -33,9 +33,18 @@ public class Parallelism implements ListIP {
             jobs.set(i, threadGenerator(i, result, values.subList(pos, pos + block).stream(), task));
             jobs.get(i).start();
         }
+        InterruptedException exception = null;
         for (Thread i : jobs) {
-            i.join();
+            try {
+                i.join();
+            } catch (InterruptedException e) {
+                if (exception == null)
+                    exception = new InterruptedException("Not all thread joined");
+                exception.addSuppressed(e);
+            }
         }
+        if (exception != null)
+            throw exception;
         return collector.apply(result.stream());
     }
 
@@ -117,7 +126,7 @@ public class Parallelism implements ListIP {
     public <T> T minimum(int threads, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
         if (values == null || values.isEmpty())
             throw new IllegalArgumentException("values was == null or isEmpty()");
-        Function<Stream<? extends T>, ? extends T> streamMax = stream -> stream.min(comparator).get();
+        Function<Stream<? extends T>, T> streamMax = stream -> stream.min(comparator).get();
         return doJob(threads, values, streamMax, streamMax);
     }
 
@@ -152,7 +161,41 @@ public class Parallelism implements ListIP {
                 stream -> stream.anyMatch(predicate),
                 stream -> stream.anyMatch(Boolean::booleanValue));
     }
+
+    /**
+     * Reduces values using monoid.
+     *
+     * @param threads number of concurrent threads.
+     * @param values  values to reduce.
+     * @param monoid  monoid to use.
+     * @return values reduced by provided monoid or {@link Monoid#getIdentity() identity} if not values specified.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
+    @Override
+    public <T> T reduce(int threads, List<T> values, Monoid<T> monoid) throws InterruptedException {
+        Function<Stream<T>, T> reducer =
+                stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator());
+        return doJob(threads, values, reducer, reducer);
+    }
+
+    /**
+     * Maps and reduces values using monoid.
+     *
+     * @param threads number of concurrent threads.
+     * @param values  values to reduce.
+     * @param lift    mapping function.
+     * @param monoid  monoid to use.
+     * @return values reduced by provided monoid or {@link Monoid#getIdentity() identity} if not values specified.
+     * @throws InterruptedException if executing thread was interrupted.
+     */
+    @Override
+    public <T, R> R mapReduce(int threads, List<T> values, Function<T, R> lift, Monoid<R> monoid) throws InterruptedException {
+        return doJob(threads, values,
+                stream -> stream.map(lift).reduce(monoid.getIdentity(), monoid.getOperator()),
+                stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator()));
+        // return reduce(threads, map(threads, values, lift), monoid);
+    }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.concurrent list ru.ifmo.rain.maslov.concurrent.Parallelism
+// java -cp . -p . -m info.kgeorgiy.java.advanced.concurrent advanced ru.ifmo.rain.maslov.concurrent.Parallelism
 
