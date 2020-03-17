@@ -8,7 +8,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Parallelism implements AdvancedIP {
+public class IterativeParallelism implements AdvancedIP {
 
     private static <A, R> Thread threadGenerator(int i, List<R> res, Stream<A> data,
                                                  Function<? super Stream<A>, R> task) {
@@ -37,10 +37,15 @@ public class Parallelism implements AdvancedIP {
         for (Thread i : jobs) {
             try {
                 i.join();
-            } catch (InterruptedException e) {
+            } catch (InterruptedException exceptionJoin) {
                 if (exception == null)
                     exception = new InterruptedException("Not all thread joined");
-                exception.addSuppressed(e);
+                exception.addSuppressed(exceptionJoin);
+                for (Thread j : jobs) {
+                    if (j.isAlive()) {
+                        j.interrupt();
+                    }
+                }
             }
         }
         if (exception != null)
@@ -197,5 +202,5 @@ public class Parallelism implements AdvancedIP {
     }
 }
 
-// java -cp . -p . -m info.kgeorgiy.java.advanced.concurrent advanced ru.ifmo.rain.maslov.concurrent.Parallelism
+// java -cp . -p . -m info.kgeorgiy.java.advanced.concurrent advanced ru.ifmo.rain.maslov.concurrent.IterativeParallelism
 
