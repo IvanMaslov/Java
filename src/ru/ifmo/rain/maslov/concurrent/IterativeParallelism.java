@@ -10,14 +10,9 @@ import java.util.stream.Stream;
 
 public class IterativeParallelism implements AdvancedIP {
 
-    private static <A, R> Thread threadGenerator(int i, List<R> res, Stream<A> data,
-                                                 Function<? super Stream<A>, R> task) {
-        return new Thread(() -> res.set(i, task.apply(data)));
-    }
-
-    private <A, R> R doJob(int threads, List<A> values,
-                           Function<? super Stream<A>, R> task,
-                           Function<? super Stream<R>, R> collector)
+    private static <A, R> R doJob(int threads, final List<A> values,
+                                  final Function<? super Stream<A>, R> task,
+                                  final Function<? super Stream<R>, R> collector)
             throws InterruptedException {
         if (threads <= 0) {
             throw new IllegalArgumentException("thread number was negative");
@@ -30,27 +25,41 @@ public class IterativeParallelism implements AdvancedIP {
         for (int i = 0, pos = 0; i < threads; ++i, pos += block) {
             if (rest == i)
                 block -= 1;
-            jobs.set(i, threadGenerator(i, result, values.subList(pos, pos + block).stream(), task));
+            final int _i = i;
+            final int _pos = pos;
+            final int _block = block;
+            jobs.set(i, new Thread(() -> result.set(_i, task.apply(values.subList(_pos, _pos + _block).stream()))));
             jobs.get(i).start();
         }
         InterruptedException exception = null;
-        for (Thread i : jobs) {
+        for (final Thread i : jobs) {
             try {
                 i.join();
-            } catch (InterruptedException exceptionJoin) {
-                if (exception == null)
+            } catch (final InterruptedException exceptionJoin) {
+                if (exception == null) {
                     exception = new InterruptedException("Not all thread joined");
-                exception.addSuppressed(exceptionJoin);
-                for (Thread j : jobs) {
-                    if (j.isAlive()) {
+                    for (final Thread j : jobs) {
                         j.interrupt();
                     }
                 }
+                exception.addSuppressed(exceptionJoin);
             }
         }
-        if (exception != null)
+        if (exception != null) {
             throw exception;
+        }
         return collector.apply(result.stream());
+    }
+
+    private <T> Function<Stream<T>, T> monoidReducer(final Monoid<T> monoid) {
+        return stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator());
+    }
+
+    private <T, U> List<U> doStreamAction(final int threads, final List<? extends T> values,
+                                          final Function<Stream<? extends T>, Stream<? extends U>> action) throws InterruptedException {
+        return doJob(threads, values,
+                stream -> action.apply(stream).collect(Collectors.toList()),
+                stream -> stream.flatMap(Collection::stream).collect(Collectors.toList()));
     }
 
     /**
@@ -62,7 +71,7 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws InterruptedException if executing thread was interrupted.
      */
     @Override
-    public String join(int threads, List<?> values) throws InterruptedException {
+    public String join(final int threads, final List<?> values) throws InterruptedException {
         return doJob(threads, values,
                 stream -> stream.map(Object::toString).collect(Collectors.joining()),
                 stream -> stream.collect(Collectors.joining()));
@@ -78,10 +87,8 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws InterruptedException if executing thread was interrupted.
      */
     @Override
-    public <T> List<T> filter(int threads, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
-        return doJob(threads, values,
-                stream -> stream.filter(predicate).collect(Collectors.toList()),
-                stream -> stream.flatMap(Collection::stream).collect(Collectors.toList()));
+    public <T> List<T> filter(final int threads, final List<? extends T> values, final Predicate<? super T> predicate) throws InterruptedException {
+        return doStreamAction(threads, values, stream -> stream.filter(predicate));
     }
 
     /**
@@ -94,10 +101,8 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws InterruptedException if executing thread was interrupted.
      */
     @Override
-    public <T, U> List<U> map(int threads, List<? extends T> values, Function<? super T, ? extends U> f) throws InterruptedException {
-        return doJob(threads, values,
-                stream -> stream.map(f).collect(Collectors.toList()),
-                stream -> stream.flatMap(Collection::stream).collect(Collectors.toList()));
+    public <T, U> List<U> map(final int threads, final List<? extends T> values, final Function<? super T, ? extends U> f) throws InterruptedException {
+        return doStreamAction(threads, values, stream -> stream.map(f));
     }
 
     /**
@@ -112,7 +117,7 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws java.util.NoSuchElementException if not values are given.
      */
     @Override
-    public <T> T maximum(int threads, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
+    public <T> T maximum(final int threads, final List<? extends T> values, final Comparator<? super T> comparator) throws InterruptedException {
         return minimum(threads, values, Collections.reverseOrder(comparator));
     }
 
@@ -128,10 +133,10 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws java.util.NoSuchElementException if not values are given.
      */
     @Override
-    public <T> T minimum(int threads, List<? extends T> values, Comparator<? super T> comparator) throws InterruptedException {
+    public <T> T minimum(final int threads, final List<? extends T> values, final Comparator<? super T> comparator) throws InterruptedException {
         if (values == null || values.isEmpty())
             throw new IllegalArgumentException("values was == null or isEmpty()");
-        Function<Stream<? extends T>, T> streamMax = stream -> stream.min(comparator).get();
+        final Function<Stream<? extends T>, T> streamMax = stream -> stream.min(comparator).get();
         return doJob(threads, values, streamMax, streamMax);
     }
 
@@ -146,7 +151,7 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws InterruptedException if executing thread was interrupted.
      */
     @Override
-    public <T> boolean all(int threads, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
+    public <T> boolean all(final int threads, final List<? extends T> values, final Predicate<? super T> predicate) throws InterruptedException {
         return !any(threads, values, predicate.negate());
     }
 
@@ -161,7 +166,7 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws InterruptedException if executing thread was interrupted.
      */
     @Override
-    public <T> boolean any(int threads, List<? extends T> values, Predicate<? super T> predicate) throws InterruptedException {
+    public <T> boolean any(final int threads, final List<? extends T> values, final Predicate<? super T> predicate) throws InterruptedException {
         return doJob(threads, values,
                 stream -> stream.anyMatch(predicate),
                 stream -> stream.anyMatch(Boolean::booleanValue));
@@ -177,9 +182,8 @@ public class IterativeParallelism implements AdvancedIP {
      * @throws InterruptedException if executing thread was interrupted.
      */
     @Override
-    public <T> T reduce(int threads, List<T> values, Monoid<T> monoid) throws InterruptedException {
-        Function<Stream<T>, T> reducer =
-                stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator());
+    public <T> T reduce(final int threads, final List<T> values, final Monoid<T> monoid) throws InterruptedException {
+        final Function<Stream<T>, T> reducer = monoidReducer(monoid);
         return doJob(threads, values, reducer, reducer);
     }
 
@@ -195,10 +199,8 @@ public class IterativeParallelism implements AdvancedIP {
      */
     @Override
     public <T, R> R mapReduce(int threads, List<T> values, Function<T, R> lift, Monoid<R> monoid) throws InterruptedException {
-        return doJob(threads, values,
-                stream -> stream.map(lift).reduce(monoid.getIdentity(), monoid.getOperator()),
-                stream -> stream.reduce(monoid.getIdentity(), monoid.getOperator()));
-        // return reduce(threads, map(threads, values, lift), monoid);
+        final Function<Stream<R>, R> reducer = monoidReducer(monoid);
+        return doJob(threads, values, stream -> reducer.apply(stream.map(lift)), reducer);
     }
 }
 
